@@ -21,10 +21,10 @@ class Statemachine():
         self.sd.register(rcomp)
         self.sd.start()
         print "YOOOYOYOO"
-        rcomp.bind_component()
+ #       rcomp.bind_component()
 
         print "YOOOYOYOO"
-        #rcomp.wait_connected(10.0)
+        rcomp.wait_connected(10.0)
 
         print "YOOOYOYOO"
 
