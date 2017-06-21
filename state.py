@@ -11,9 +11,9 @@ class Statemachine():
         self.sd = ServiceDiscovery()
         #self.sd.on_discovered.append(self.service_discovered)
 
-        rcomp = halremote.RemoteComponent('test1', debug=True)
+        rcomp = halremote.RemoteComponent('and2', debug=True)
         rcomp.no_create = True
-        rcomp.newpin('test1.button0', halremote.HAL_BIT, halremote.HAL_OUT)
+        rcomp.newpin('button0', halremote.HAL_BIT, halremote.HAL_OUT)
         #rcomp.newpin('button1', halremote.HAL_BIT, halremote.HAL_OUT)
         rcomp.on_connected_changed.append(self._connected)
 
@@ -21,7 +21,7 @@ class Statemachine():
         self.sd.register(rcomp)
         self.sd.start()
         print "YOOOYOYOO"
- #       rcomp.bind_component()
+        rcomp.bind_component()
 
         print "YOOOYOYOO"
         rcomp.wait_connected(10.0)
