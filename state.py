@@ -9,26 +9,26 @@ import pymachinetalk.halremote as halremote
 class Statemachine():
     def __init__(self):
         self.sd = ServiceDiscovery()
-        #sd.on_discovered.append(self.service_discovered)
+        #self.sd.on_discovered.append(self.service_discovered)
 
-        rcomp = halremote.RemoteComponent('test', debug=True)
+        rcomp = halremote.RemoteComponent('test1', debug=True)
         rcomp.no_create = True
-        rcomp.newpin('button0', halremote.HAL_BIT, halremote.HAL_OUT)
-        rcomp.newpin('button1', halremote.HAL_BIT, halremote.HAL_OUT)
-        led_pin = rcomp.newpin('led', halremote.HAL_BIT, halremote.HAL_IN)
-        led_pin.on_value_changed.append(self.led_pin_changed)
-        led_pin.on_synced_changed.append(self.led_pin_synced)
+        rcomp.newpin('test1.button0', halremote.HAL_BIT, halremote.HAL_OUT)
+        #rcomp.newpin('button1', halremote.HAL_BIT, halremote.HAL_OUT)
         rcomp.on_connected_changed.append(self._connected)
 
         self.halrcomp = rcomp
         self.sd.register(rcomp)
+        self.sd.start()
+        print "YOOOYOYOO"
+        rcomp.bind_component()
 
-    def led_pin_synced(self, synced):
-        if synced:
-            print("LED pin synced")
+        print "YOOOYOYOO"
+        #rcomp.wait_connected(10.0)
 
-    def led_pin_changed(self, value):
-        print('LED pin value changed: %s' % str(value))
+        print "YOOOYOYOO"
+
+
 
     def _connected(self, connected):
         print('Remote component connected: %s' % str(connected))
@@ -47,13 +47,13 @@ class Statemachine():
 
     def service_discovered(self, data):
         print("discovered %s %s %s" % (data.name, data.dsn, data.uuid))
-        self.start_sd(data.uuid)
+        self.sd(data.uuid)
 
 def main():
     #gobject.threads.init()
     sm = Statemachine()
 
-    sm.start()
+    #sm.start()
 
     try:
         while True:
