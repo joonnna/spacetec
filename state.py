@@ -8,27 +8,31 @@ import pymachinetalk.halremote as halremote
 
 class Statemachine():
     def __init__(self):
+        #self.state =
         self.sd = ServiceDiscovery()
         #self.sd.on_discovered.append(self.service_discovered)
 
-        rcomp = halremote.RemoteComponent('and2', debug=True)
-        rcomp.no_create = True
-        rcomp.newpin('button0', halremote.HAL_BIT, halremote.HAL_OUT)
-        #rcomp.newpin('button1', halremote.HAL_BIT, halremote.HAL_OUT)
+        rcomp = halremote.RemoteComponent('muxdemo', debug=True)
+        #rcomp.no_create = True
+        #b = rcomp.newpin('button0', halremote.HAL_FLOAT, halremote.HAL_OUT)
+        b = rcomp.newpin('select', halremote.HAL_S32, halremote.HAL_OUT)
+        b.on_value_changed.append(self.test)
+        #rcomp.newpin('button1', halremote.HAL_FLOAT, halremote.HAL_OUT)
+        #rcomp.newpin('led', halremote.HAL_FLOAT, halremote.HAL_IN)
         rcomp.on_connected_changed.append(self._connected)
 
         self.halrcomp = rcomp
         self.sd.register(rcomp)
         self.sd.start()
-        print "YOOOYOYOO"
+
         rcomp.bind_component()
-
         print "YOOOYOYOO"
-        rcomp.wait_connected(10.0)
 
         print "YOOOYOYOO"
 
-
+    def test(self, value):
+        print value
+        print "YYYYEEEEEEEEEH"
 
     def _connected(self, connected):
         print('Remote component connected: %s' % str(connected))
@@ -39,21 +43,22 @@ class Statemachine():
     def stop(self):
         self.sd.stop()
 
-    #def start_sd(self):
-        #sd.start()
-        #halrcmd_sd = ServiceDiscovery()
-        #halrcmd_sd.on_discovered.append(self.halrcmd_discovered)
-        #halrcmd_sd.start()
-
     def service_discovered(self, data):
         print("discovered %s %s %s" % (data.name, data.dsn, data.uuid))
         self.sd(data.uuid)
+
 
 def main():
     #gobject.threads.init()
     sm = Statemachine()
 
-    #sm.start()
+    #print sm.halrcomp.pin("button0")
+    time.sleep(5)
+
+    sm.halrcomp.getpin("select").set(1)
+    #pin = sm.halrcomp.newpin("testyo", halremote.HAL_BIT, halremote.HAL_IN)
+    #sm.halrcomp.pin_change(pin)
+    #sm.halrcomp.add_pins()
 
     try:
         while True:

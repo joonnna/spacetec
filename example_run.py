@@ -33,14 +33,14 @@ try:
     launcher.check_installation()
     launcher.cleanup_session()  # kill any running Machinekit instances
     launcher.start_realtime()  # start Machinekit realtime environment
-    launcher.load_hal_file('hal_example.py')  # load the main HAL file
+    launcher.load_hal_file('mux_example.py')  # load the main HAL file
     launcher.register_exit_handler()  # enable on ctrl-C, needs to executed after HAL files
 
     launcher.ensure_mklauncher()  # ensure mklauncher is started
 
-    if not args.no_config:
+#    if not args.no_config:
         # the point-of-contact for QtQUickVCP
-        launcher.start_process('configserver -n AND-Demo .')
+ #       launcher.start_process('configserver -n AND-Demo .')
     if args.gladevcp:
         # start the gladevcp version
         if args.local:

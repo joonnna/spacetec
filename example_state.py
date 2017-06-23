@@ -11,7 +11,7 @@ class BasicClass(object):
         self.sd = ServiceDiscovery()
 
         rcomp = halremote.RemoteComponent('anddemo', debug=False)
-        rcomp.no_create = True
+        #rcomp.no_create = True
         rcomp.newpin('button0', halremote.HAL_BIT, halremote.HAL_OUT)
         rcomp.newpin('button1', halremote.HAL_BIT, halremote.HAL_OUT)
         led_pin = rcomp.newpin('led', halremote.HAL_BIT, halremote.HAL_IN)
@@ -21,6 +21,7 @@ class BasicClass(object):
 
         self.halrcomp = rcomp
         self.sd.register(rcomp)
+        self.sd.start()
 
     def led_pin_synced(self, synced):
         if synced:
@@ -42,8 +43,16 @@ def main():
     basic = BasicClass()
 
     print('starting')
-    basic.start()
+    time.sleep(1)
+    #print basic.halrcomp.pinsbyname['button0'].get()
+    #print basic.halrcomp.pinsbyname['button0'].set(True)
+    #print basic.halrcomp.pinsbyname['button0'].get()
 
+    #print basic.halrcomp.pin_change(basic.halrcomp.pinsbyname['button0'])
+
+    #print basic.halrcomp.on_connected_changed
+
+    #print basic.halrcomp.connected
     try:
         while True:
             time.sleep(0.5)
