@@ -47,7 +47,7 @@ rtapi_app_main(void)
     int a, b, res, ret;
     hal_counter_t *entry;
 
-    comp_id = hal_init("YEP");
+    comp_id = hal_init("test");
     if (comp_id < 0)
     {
         printf("%d\n",__LINE__);

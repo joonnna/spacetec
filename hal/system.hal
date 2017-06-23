@@ -1,11 +1,13 @@
 # components
-loadrt threads name1=thread1 period1=100
+#loadrt threads name1=thread1 period1=100000
+#newthread thread1 100000000 #period=10000000000000000000000
+newthread fpthread fp 10000000
 newinst muxn mux pincount=3
 newinst limit1 lim
-loadrt pid
+loadrt pid names=pid
 loadrt bldc cfg=q
-loadrt abs
-
+loadrt abspos
+loadrt steptrack
 
 # Test values
 setp mux.in0 5.4
@@ -16,39 +18,57 @@ setp mux.in2 7.4
 
 # nets
 net init-to-mux => mux.in0
-net step-track-to-mux => mux.in1
+
 net mux-to-lim <= mux.out
 net mux-to-lim => lim.in
+
 net lim-to-pid <= lim.out
-net lim-to-pid => pid.0.command
-net abs-to-pid => pid.0.feedback
-net pid-to-bldc <= pid.0.output
+net lim-to-pid => pid.command
+
+net abs-to-pid => pid.feedback
+net abs-to-pid <= abspos.0.out0
+
+net pid-to-bldc <= pid.output
 net pid-to-bldc => bldc.0.value
+
 net bldc-to-pwm <= bldc.0.out
-net abs-out <= abs.0.out
-#net abs-out => pid.0.in
+
+net abs-to-step <= abspos.0.out1
+net abs-to-step => steptrack.0.in0
+
+net step-to-mux <= steptrack.0.out
+net step-to-mux => mux.in1
 
 # parameter values
 setp lim.max 1
 setp lim.min 0
-setp pid.0.Pgain 1
-setp pid.0.Igain 1
+setp pid.Pgain 1
+setp pid.Igain 1
 
 # Remote components
-newcomp muxdemo
-newpin muxdemo muxdemo.select s32 out
-ready muxdemo
+newcomp rmux
+newpin rmux rmux.out s32 out
+ready rmux
 
-net select mux.sel <= muxdemo.select
+newcomp rabspos
+newpin rabspos rabspos.out float out
+newpin rabspos rabspos.in float in
+ready rabspos
+
+setp abspos.0.old 20
+
+net select mux.sel <= rmux.out
+#net pos rabspos.in <= absos.0.old
+#net reset abspos.0.old <= rabspos.out
 
 # realtime thread/function links
-addf mux thread1
-addf lim thread1
-addf bldc.0 thread1
-addf abs.0 thread1
-addf pid.0 thread1
+addf mux fpthread
+addf lim fpthread
+addf bldc.0 fpthread
+addf abspos.0 fpthread
+addf pid.do-pid-calcs fpthread
 
 start
+
 # Haltalk
 loadusr haltalk
-

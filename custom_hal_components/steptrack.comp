@@ -1,0 +1,8 @@
+component steptrack "Steptrack algorithm";
+pin in float in0;
+pin in float in1;
+pin out float out;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+out = in0 + in1;

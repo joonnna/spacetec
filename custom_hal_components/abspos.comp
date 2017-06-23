@@ -1,0 +1,12 @@
+component abspos "Increment absolute position";
+pin in float in;
+pin out float out0;
+pin out float out1;
+param rw float old;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+float tmp = in;
+out0 = tmp + old;
+out1 = out0;
+old = tmp;
