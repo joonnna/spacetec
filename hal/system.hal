@@ -1,0 +1,54 @@
+# components
+loadrt threads name1=thread1 period1=100
+newinst muxn mux pincount=3
+newinst limit1 lim
+loadrt pid
+loadrt bldc cfg=q
+loadrt abs
+
+
+# Test values
+setp mux.in0 5.4
+setp mux.in1 3.4
+setp mux.in2 7.4
+
+# signals
+
+# nets
+net init-to-mux => mux.in0
+net step-track-to-mux => mux.in1
+net mux-to-lim <= mux.out
+net mux-to-lim => lim.in
+net lim-to-pid <= lim.out
+net lim-to-pid => pid.0.command
+net abs-to-pid => pid.0.feedback
+net pid-to-bldc <= pid.0.output
+net pid-to-bldc => bldc.0.value
+net bldc-to-pwm <= bldc.0.out
+net abs-out <= abs.0.out
+#net abs-out => pid.0.in
+
+# parameter values
+setp lim.max 1
+setp lim.min 0
+setp pid.0.Pgain 1
+setp pid.0.Igain 1
+
+# Remote components
+newcomp muxdemo
+newpin muxdemo muxdemo.select s32 out
+ready muxdemo
+
+net select mux.sel <= muxdemo.select
+
+# realtime thread/function links
+addf mux thread1
+addf lim thread1
+addf bldc.0 thread1
+addf abs.0 thread1
+addf pid.0 thread1
+
+start
+# Haltalk
+loadusr haltalk
+

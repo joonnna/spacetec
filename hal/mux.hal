@@ -1,0 +1,25 @@
+loadrt threads name1=muxthread period1=100
+newinst muxn muxn
+setp muxn.in0 5.4
+setp muxn.in1 3.4
+
+#newsig in0 float
+#newsig in1 float
+#newsig out float
+
+newsig select s32
+
+newcomp muxdemo
+newpin muxdemo muxdemo.select s32 out
+#newpin muxdemo muxdemo.button0 float out
+#newpin muxdemo muxdemo.button1 float out
+#newpin muxdemo muxdemo.led float in
+
+ready muxdemo
+net select muxn.sel muxdemo.select
+addf muxn muxthread
+#net in0 muxn.in0 muxdemo.button0
+#net in1 muxn.in1 muxdemo.button1
+#net out muxn.out muxdemo.led
+
+loadusr haltalk
