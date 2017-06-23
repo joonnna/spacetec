@@ -1,0 +1,10 @@
+component ddt "Compute the derivative of the input function";
+pin in float in;
+pin out float out;
+variable float old;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+float tmp = in;
+out = (tmp - old) / fperiod;
+old = tmp;
