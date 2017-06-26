@@ -19,21 +19,32 @@ class Statemachine():
         self.halrcomps = {}
         self.initrcomps()
         self.search_and_bind()
-        self.set_pos(pos)
+        self.set_pos(pos[0], pos[1])
         self.start_pos_thread()
 
     def initrcomps(self):
-        mux = halremote.RemoteComponent("rmux", debug=True)
-        select = mux.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
-        mux.on_connected_changed.append(self._connected)
+        mux0 = halremote.RemoteComponent("rmux0", debug=True)
+        select0 = mux0.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
+        mux0.on_connected_changed.append(self._connected)
 
-        abspos = halremote.RemoteComponent("rabspos", debug=True)
-        abspos.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        abspos.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
-        abspos.on_connected_changed.append(self._connected)
+        mux1 = halremote.RemoteComponent("rmux1", debug=True)
+        select1 = mux1.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
+        mux1.on_connected_changed.append(self._connected)
 
-        self.halrcomps[mux.name] = mux
-        self.halrcomps[abspos.name] = abspos
+        abspos0 = halremote.RemoteComponent("rabspos0", debug=True)
+        abspos0.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        abspos0.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
+        abspos0.on_connected_changed.append(self._connected)
+
+        abspos1 = halremote.RemoteComponent("rabspos1", debug=True)
+        abspos1.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        abspos1.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
+        abspos1.on_connected_changed.append(self._connected)
+
+        self.halrcomps[mux0.name] = mux0
+        self.halrcomps[mux1.name] = mux1
+        self.halrcomps[abspos0.name] = abspos0
+        self.halrcomps[abspos1.name] = abspos1
 
     def search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
@@ -53,22 +64,32 @@ class Statemachine():
             print "Initial pos file not found! Exiting"
             sys.exit(1)
 
-        return float(pos[0]) + float(pos[1])
+        return pos[0], pos[1]
 
-    def set_pos(self, pos):
-        abspos = self.halrcomps["rabspos"]
-        abspos.getpin("out").set(pos)
+    def set_pos(self, pos0, pos1):
+        abspos0 = self.halrcomps["rabspos0"]
+        abspos0.getpin("out").set(pos0)
+
+
+        abspos1 = self.halrcomps["rabspos1"]
+        abspos1.getpin("out").set(pos1)
+
 
     def get_pos(self):
-        abspos = self.halrcomps["rabspos"]
-        return abspos.getpin("in").get()
+        abspos0 = self.halrcomps["rabspos0"]
+        pos0 = abspos0.getpin("in").get()
+
+        abspos1 = self.halrcomps["rabspos1"]
+        pos1 = abspos1.getpin("in").get()
+
+        return pos0, pos1
 
     def save_pos(self):
         while True:
-            pos = self.get_pos()
+            p0, p1 = self.get_pos()
             try:
                 f = open(self.filepath, "w")
-                f.write("5.4\n3.4")
+                f.write("%f\n%f", p0, p1)
                 f.close()
             except IOError:
                 print "Can't save position, should restart"
@@ -97,9 +118,13 @@ def main():
 
     time.sleep(5)
 
-    sm.halrcomps["rmux"].getpin("out").set(1)
+    sm.halrcomps["rmux0"].getpin("out").set(1)
 
-    sm.set_pos(24)
+    sm.set_pos(4, 10)
+
+    time.sleep(10)
+
+    sm.set_pos(24, 48)
 
     try:
         while True:

@@ -2,33 +2,38 @@
 #loadrt threads name1=thread1 period1=100000
 #newthread thread1 100000000 #period=10000000000000000000000
 newthread fpthread fp 10000000
-newinst muxn mux pincount=3
-newinst limit1 lim
-loadrt pid names=pid
-loadrt bldc cfg=q
-loadrt abspos
-loadrt steptrack
+loadrt muxn count=2
+loadrt limit1 count=2
+loadrt pid count=2 #names=pid
+loadrt bldc cfg=q,q
+loadrt abspos count=2
+loadrt steptrack count=2
+
+
+#############################################
+# 1st set of components and their connections
+############################################# 
 
 # Test values
-setp mux.in0 5.4
-setp mux.in1 3.4
-setp mux.in2 7.4
+setp muxn.0.in0 5.4
+setp muxn.0.in1 3.4
+#setp muxn.0.in2 7.4
 
 # signals
 
 # nets
-net init-to-mux => mux.in0
+net init-to-mux => muxn.0.in0
 
-net mux-to-lim <= mux.out
-net mux-to-lim => lim.in
+net mux-to-lim <= muxn.0.out
+net mux-to-lim => limit1.0.in
 
-net lim-to-pid <= lim.out
-net lim-to-pid => pid.command
+net lim-to-pid <= limit1.0.out
+net lim-to-pid => pid.0.command
 
-net abs-to-pid => pid.feedback
+net abs-to-pid => pid.0.feedback
 net abs-to-pid <= abspos.0.out0
 
-net pid-to-bldc <= pid.output
+net pid-to-bldc <= pid.0.output
 net pid-to-bldc => bldc.0.value
 
 net bldc-to-pwm <= bldc.0.out
@@ -37,40 +42,91 @@ net abs-to-step <= abspos.0.out1
 net abs-to-step => steptrack.0.in0
 
 net step-to-mux <= steptrack.0.out
-net step-to-mux => mux.in1
+net step-to-mux => muxn.0.in1
 
 #net test-to-abs => abspos.0.in
 
-
-
 # parameter values
-setp lim.max 1
-setp lim.min 0
-setp pid.Pgain 1
-setp pid.Igain 1
+setp limit1.0.max 1
+setp limit1.0.min 0
+setp pid.0.Pgain 1
+setp pid.0.Igain 1
 
 # Remote components
-newcomp rmux
-newpin rmux rmux.out s32 out
-ready rmux
+newcomp rmux0
+newpin rmux0 rmux0.out s32 out
+ready rmux0
 
-newcomp rabspos
-newpin rabspos rabspos.in float in
-newpin rabspos rabspos.out float out
-ready rabspos
+newcomp rabspos0
+newpin rabspos0 rabspos0.in float in
+newpin rabspos0 rabspos0.out float out
+ready rabspos0
 
 #setp abspos.0.old 20
 
-net select mux.sel <= rmux.out
-net pos abspos.0.out2 => rabspos.in
-net reset rabspos.out => abspos.0.in1
+net select.0 muxn.0.sel <= rmux0.out
+
+net pos.0 abspos.0.out2 => rabspos0.in
+net reset.0 rabspos0.out => abspos.0.in1
+
+
+#############################################
+# 2st set of components and their connections
+############################################# 
+
+# nets
+net init-to-mux.1 => muxn.1.in0
+
+net mux-to-lim.1 <= muxn.1.out
+net mux-to-lim.1 => limit1.1.in
+
+net lim-to-pid.1 <= limit1.1.out
+net lim-to-pid.1 => pid.1.command
+
+net abs-to-pid.1 => pid.1.feedback
+net abs-to-pid.1 <= abspos.1.out0
+
+net pid-to-bldc.1 <= pid.1.output
+net pid-to-bldc.1 => bldc.1.value
+
+net bldc-to-pwm.1 <= bldc.1.out
+
+net abs-to-step.1 <= abspos.1.out1
+net abs-to-step.1 => steptrack.1.in0
+
+net step-to-mux.1 <= steptrack.1.out
+net step-to-mux.1 => muxn.1.in1
+
+#net test-to-abs => abspos.0.in
+
+# parameter values
+setp limit1.1.max 1
+setp limit1.1.min 0
+setp pid.1.Pgain 1
+setp pid.1.Igain 1
+
+# Remote components
+newcomp rmux1
+newpin rmux1 rmux1.out s32 out
+ready rmux1
+
+newcomp rabspos1
+newpin rabspos1 rabspos1.in float in
+newpin rabspos1 rabspos1.out float out
+ready rabspos1
+
+net select.1 muxn.1.sel <= rmux1.out
+
+net pos.1 abspos.1.out2 => rabspos1.in
+net reset.1 rabspos1.out => abspos.1.in1
+
 
 # realtime thread/function links
-addf mux fpthread
-addf lim fpthread
+addf muxn.0 fpthread
+addf limit1.0 fpthread
 addf bldc.0 fpthread
 addf abspos.0 fpthread
-addf pid.do-pid-calcs fpthread
+addf pid.0.do-pid-calcs fpthread
 
 start
 
