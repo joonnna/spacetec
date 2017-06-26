@@ -1,4 +1,3 @@
-import gobject
 import argparse
 import time
 import sys
@@ -70,7 +69,6 @@ class Statemachine():
         abspos0 = self.halrcomps["rabspos0"]
         abspos0.getpin("out").set(pos0)
 
-
         abspos1 = self.halrcomps["rabspos1"]
         abspos1.getpin("out").set(pos1)
 
@@ -108,9 +106,8 @@ class Statemachine():
 
 
 def main():
-    #gobject.threads.init()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True, help="Filepath to the initial position file, containing azimuth and elivation paramterts on two seperate lines.")
+    parser.add_argument("--path", required=True, help="Filepath to the initial position file, containing azimuth and elevation paramterts on two seperate lines.")
 
     args = parser.parse_args()
 
@@ -135,17 +132,6 @@ def main():
     sm.sd.stop()
 
     sys.exit(0)
-
-    #while threading.active_count() > 1:
-    #    time.sleep(0.1)
-
-    #print('threads stopped')
-    #loop = gobject.MainLoop()
-
-    #try:
-    #    loop.run()
-    #except KeyboardInterrupt:
-    #    loop.quit()
 
     print ("Stopped")
 
