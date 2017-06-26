@@ -19,7 +19,26 @@ if (prev_update != tmp2)
 }
 else
 {
+    out0 = tmp + old;
     old = tmp;
 }
 out1 = out0;
 out2 = old;
+
+/*
+float tmp = in0;
+float tmp2 = in1;
+if (tmp2 != 0.0)
+{
+    old = tmp2;
+    out0 = tmp + old;
+}
+else
+{
+    out0 = tmp + old;
+    old = tmp2;
+}
+
+out1 = out0;
+out2 = old;
+*/

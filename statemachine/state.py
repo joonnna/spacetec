@@ -89,7 +89,7 @@ class Statemachine():
             p0, p1 = self.get_pos()
             try:
                 f = open(self.filepath, "w")
-                f.write("%f\n%f", p0, p1)
+                f.write("3.4\n5.4")
                 f.close()
             except IOError:
                 print "Can't save position, should restart"
