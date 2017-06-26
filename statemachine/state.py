@@ -29,6 +29,7 @@ class Statemachine():
 
         abspos = halremote.RemoteComponent("rabspos", debug=True)
         abspos.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        abspos.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos.on_connected_changed.append(self._connected)
 
         self.halrcomps[mux.name] = mux
@@ -46,12 +47,12 @@ class Statemachine():
     def read_init_pos(self):
         try:
             f = open(self.filepath, "r")
+            pos = f.read().split("\n")
+            f.close()
         except IOError:
             print "Initial pos file not found! Exiting"
             sys.exit(1)
 
-        pos = f.read().split("\n")
-        f.close()
         return float(pos[0]) + float(pos[1])
 
     def set_pos(self, pos):
@@ -67,11 +68,11 @@ class Statemachine():
             pos = self.get_pos()
             try:
                 f = open(self.filepath, "w")
+                f.write("5.4\n3.4")
+                f.close()
             except IOError:
                 print "Can't save position, should restart"
-                return
-            f.write(string(pos))
-            f.close()
+
             time.sleep(5)
 
     def start_pos_thread(self):
@@ -97,9 +98,8 @@ def main():
     time.sleep(5)
 
     sm.halrcomps["rmux"].getpin("out").set(1)
-    #pin = sm.halrcomp.newpin("testyo", halremote.HAL_BIT, halremote.HAL_IN)
-    #sm.halrcomp.pin_change(pin)
-    #sm.halrcomp.add_pins()
+
+    sm.set_pos(24)
 
     try:
         while True:
@@ -109,11 +109,12 @@ def main():
 
     sm.sd.stop()
 
+    sys.exit(0)
+
     #while threading.active_count() > 1:
     #    time.sleep(0.1)
 
     #print('threads stopped')
-    sys.exit(0)
     #loop = gobject.MainLoop()
 
     #try:

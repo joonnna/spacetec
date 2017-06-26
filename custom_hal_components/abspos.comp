@@ -1,12 +1,25 @@
 component abspos "Increment absolute position";
-pin in float in;
+pin in float in0;
+pin in float in1;
 pin out float out0;
 pin out float out1;
+pin out float out2;
 param rw float old;
+param rw float prev_update;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-float tmp = in;
-out0 = tmp + old;
+float tmp = in0;
+float tmp2 = in1;
+if (prev_update != tmp2)
+{
+    old = tmp2;
+    prev_update = tmp2;
+    out0 = tmp + old;
+}
+else
+{
+    old = tmp;
+}
 out1 = out0;
-old = tmp;
+out2 = old;
