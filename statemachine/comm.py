@@ -25,8 +25,9 @@ class Communication():
         longtitude = float(data[self.long_start:self.long_end])
         latitude = float(data[self.lat_start:self.lat_end])
         height = float(data[self.height_start:self.height_end])
-        print longtitude, latitude, height
+#        print longtitude, latitude, height
 
+        return longtitude, latitude
 
     def send_pos(self, pos):
         pass
@@ -43,12 +44,12 @@ def run(ip, port, cb):
 
     comm = Communication(port, ip)
 
-    self.gps_test()
+    #self.gps_test()
 
     packages = 0
     while True:
-        data = self.receive_data()
+        data = comm.receive_data()
         packages += 1
-        print packages
-        pos = self.calc_pos(data)
+ #       print packages
+        pos = comm.calc_pos(data)
         cb(pos)

@@ -66,10 +66,10 @@ ready rabspos0
 #setp abspos.0.old 20
 
 newcomp rsigcheck
-newpin rsigcheck rsigcheck.in bool in
+newpin rsigcheck rsigcheck.in bit in
 ready rsigcheck
 
-net sig-to-python rsigcheck.in <= sigcheck.out2
+net sig-to-python rsigcheck.in <= sigcheck.0.out2
 
 
 # Remote components nets

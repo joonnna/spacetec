@@ -2,13 +2,13 @@ component sigcheck "Check signal strength";
 pin in float in;
 pin out float out0;
 pin out float out1;
-pin out bool out2;
+pin out bit out2;
 param r float sig_limit;
-param rw bool axis;
+param rw bit axis;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-if (in0 < sig_limit)
+if (in < sig_limit)
     out2 = true;
 else
     out2 = false;

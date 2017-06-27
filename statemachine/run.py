@@ -1,7 +1,7 @@
 import time
 import argparse
 from machinekit import launcher
-from state import *
+import state
 
 
 parser = argparse.ArgumentParser()
@@ -12,7 +12,9 @@ args = parser.parse_args()
 launcher.check_installation()
 launcher.cleanup_session()  # kill any running Machinekit instances
 launcher.start_realtime()  # start Machinekit realtime environment
-launcher.load_hal_file("hal/system.hal")  # load the main HAL file
+
+#TODO relpath... wtf man...absolute path or no path
+launcher.load_hal_file("../hal/system.hal")  # load the main HAL file
 launcher.register_exit_handler()  # enable on ctrl-C, needs to executed after HAL files
 
 launcher.ensure_mklauncher()  # ensure mklauncher is started

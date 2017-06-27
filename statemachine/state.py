@@ -3,7 +3,7 @@ import sys
 import thread
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
-from comm import *
+import comm
 
 init = 0
 operational = 1
@@ -12,38 +12,43 @@ gps = 2
 class Statemachine():
     def __init__(self, pos_file):
         self.state = init
+
         self.filepath = pos_file
         pos = self.read_init_pos()
+
         self.sd = ServiceDiscovery()
         self.halrcomps = {}
         self.initrcomps()
         self.search_and_bind()
+
         self.set_pos(pos[0], pos[1])
         self.start_pos_thread()
 
+        self.state = operational
+
     def initrcomps(self):
-        mux0 = halremote.RemoteComponent("rmux0", debug=True)
+        mux0 = halremote.RemoteComponent("rmux0", debug=False)
         select0 = mux0.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
         mux0.on_connected_changed.append(self._connected)
 
-        mux1 = halremote.RemoteComponent("rmux1", debug=True)
+        mux1 = halremote.RemoteComponent("rmux1", debug=False)
         select1 = mux1.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
         mux1.on_connected_changed.append(self._connected)
 
-        abspos0 = halremote.RemoteComponent("rabspos0", debug=True)
+        abspos0 = halremote.RemoteComponent("rabspos0", debug=False)
         abspos0.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos0.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos0.on_connected_changed.append(self._connected)
 
-        abspos1 = halremote.RemoteComponent("rabspos1", debug=True)
+        abspos1 = halremote.RemoteComponent("rabspos1", debug=False)
         abspos1.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos1.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos1.on_connected_changed.append(self._connected)
 
-        sigcheck = halremote.RemoteComponent("rsigcheck", debug=True)
-        sig = sigcheck.newpin("in", halremote.HAL_BOOL, halremote.HAL_IN)
+        sigcheck = halremote.RemoteComponent("rsigcheck", debug=False)
+        sig = sigcheck.newpin("in", halremote.HAL_BIT, halremote.HAL_IN)
         sigcheck.on_connected_changed.append(self._connected)
-        sig.on_value_changed(self.change_state)
+        sig.on_value_changed.append(self.change_state)
 
         self.halrcomps[mux0.name] = mux0
         self.halrcomps[mux1.name] = mux1
@@ -58,7 +63,7 @@ class Statemachine():
             self.halrcomps["rmux1"].getpin("out").set(1)
             self.state = gps
             print "Entered gps state"
-        else
+        else:
             self.halrcomps["rmux0"].getpin("out").set(0)
             self.halrcomps["rmux1"].getpin("out").set(0)
             self.state = operational
@@ -139,8 +144,7 @@ def run(posfile):
     port = 5632
 
     sm = Statemachine(posfile)
-    comm.run(sm.send_pos)
-
+    thread.start_new_thread(comm.run, (ip, port, sm.send_pos))
 
     #time.sleep(5)
 
