@@ -1,13 +1,13 @@
 from comm import *
 
-
 def main():
 
-    ip = 192.168.5
-    port = 5015
+
+    ip = "192.168.5.4"
+    port = 5632
 
 
-    comm = Communicaton(port, ip)
+    comm = Communication(port, ip)
 
     comm.run()
 
