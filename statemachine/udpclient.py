@@ -1,5 +1,5 @@
 import socket
-
+import time
 
 class Udpclient():
     def __init__(self, port, ip):
@@ -13,6 +13,14 @@ class Udpclient():
 
 
 def main():
+    f = open("ptudata", "r")
+    data = f.read()
+    lines = data.split("\n")
+    """
+    test = lines[2]
+    print str(test[172:181])
+    print len(test)
+    """
     ip = "192.168.5.4"
     port = 5632
 
@@ -20,8 +28,12 @@ def main():
 
     client = Udpclient(port, ip)
 
-    client.send_msg(msg)
-
+    for line in lines:
+        if len(line) <= 1:
+            continue
+        client.send_msg(line)
+        time.sleep(0.001)
+    print "Done sending"
 
 if __name__ == "__main__":
     main()
