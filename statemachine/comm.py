@@ -1,10 +1,11 @@
 import socket
+import gps
 
 
 class Communication():
     def __init__(self, port, ip):
         #print socket.gethostname()
-        print socket.gethostbyname(socket.gethostname())
+        #print socket.gethostbyname(socket.gethostname())
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((ip, port))
 
@@ -26,10 +27,20 @@ class Communication():
         height = float(data[self.height_start:self.height_end])
         print longtitude, latitude, height
 
+
     def send_pos(self, pos):
         pass
 
+    def gps_test(self):
+        session = gps.gps(host="localhost", port="2947")
+        session.stream(flags=gps.WATCH_JSON)
+
+        for report in session:
+            process(report)
+
+
     def run(self):
+        self.gps_test()
         packages = 0
         while True:
             data = self.receive_data()

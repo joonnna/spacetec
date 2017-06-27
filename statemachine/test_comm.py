@@ -3,7 +3,8 @@ from comm import *
 def main():
 
 
-    ip = "192.168.5.4"
+    ip = "127.0.0.1"
+    #ip = "192.168.5.4"
     port = 5632
 
 

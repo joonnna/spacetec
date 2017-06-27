@@ -21,7 +21,8 @@ def main():
     print str(test[172:181])
     print len(test)
     """
-    ip = "192.168.5.4"
+    #ip = "192.168.5.4"
+    ip = "127.0.0.1"
     port = 5632
 
     msg = "yoyoyoo bitches"
