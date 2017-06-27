@@ -1,9 +1,9 @@
-import argparse
 import time
 import sys
 import thread
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
+from comm import *
 
 init = 0
 operational = 1
@@ -40,10 +40,29 @@ class Statemachine():
         abspos1.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos1.on_connected_changed.append(self._connected)
 
+        sigcheck = halremote.RemoteComponent("rsigcheck", debug=True)
+        sig = sigcheck.newpin("in", halremote.HAL_BOOL, halremote.HAL_IN)
+        sigcheck.on_connected_changed.append(self._connected)
+        sig.on_value_changed(self.change_state)
+
         self.halrcomps[mux0.name] = mux0
         self.halrcomps[mux1.name] = mux1
         self.halrcomps[abspos0.name] = abspos0
         self.halrcomps[abspos1.name] = abspos1
+        self.halrcomps[sigcheck.name] = sigcheck
+
+    def change_state(self):
+        sig = self.halrcomps["rsigcheck"].getpin("in").get()
+        if sig:
+            self.halrcomps["rmux0"].getpin("out").set(1)
+            self.halrcomps["rmux1"].getpin("out").set(1)
+            self.state = gps
+            print "Entered gps state"
+        else
+            self.halrcomps["rmux0"].getpin("out").set(0)
+            self.halrcomps["rmux1"].getpin("out").set(0)
+            self.state = operational
+            print "Entered operational state"
 
     def search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
@@ -54,6 +73,7 @@ class Statemachine():
         for name, rcomp in self.halrcomps.iteritems():
             rcomp.bind_component()
 
+    #TODO Need to do something incase file doesn't exist, enter gps state maybe...
     def read_init_pos(self):
         try:
             f = open(self.filepath, "r")
@@ -94,6 +114,14 @@ class Statemachine():
 
             time.sleep(5)
 
+    def send_pos(self, pos):
+        mux0 = self.halrcomps["rmux0"]
+        mux0.getpin("out").set(pos[0])
+
+        mux1 = self.halrcomps["rmux1"]
+        mux1.getpin("out").set(pos[1])
+
+
     def start_pos_thread(self):
         return thread.start_new_thread(self.save_pos, ())
 
@@ -105,23 +133,24 @@ class Statemachine():
         self.sd(data.uuid)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True, help="Filepath to the initial position file, containing azimuth and elevation paramterts on two seperate lines.")
+def run(posfile):
 
-    args = parser.parse_args()
+    ip = "192.168.5.4"
+    port = 5632
 
-    sm = Statemachine(args.path)
+    sm = Statemachine(posfile)
+    comm.run(sm.send_pos)
 
-    time.sleep(5)
 
-    sm.halrcomps["rmux0"].getpin("out").set(1)
+    #time.sleep(5)
 
-    sm.set_pos(4, 10)
+    #sm.halrcomps["rmux0"].getpin("out").set(1)
 
-    time.sleep(10)
+    #sm.set_pos(4, 10)
 
-    sm.set_pos(24, 48)
+    #time.sleep(10)
+
+    #sm.set_pos(24, 48)
 
     try:
         while True:
@@ -134,6 +163,3 @@ def main():
     sys.exit(0)
 
     print ("Stopped")
-
-if __name__ == "__main__":
-    main()

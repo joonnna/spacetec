@@ -39,12 +39,16 @@ class Communication():
             process(report)
 
 
-    def run(self):
-        self.gps_test()
-        packages = 0
-        while True:
-            data = self.receive_data()
-            packages += 1
-            print packages
-            pos = self.calc_pos(data)
-            self.send_pos(pos)
+def run(ip, port, cb):
+
+    comm = Communication(port, ip)
+
+    self.gps_test()
+
+    packages = 0
+    while True:
+        data = self.receive_data()
+        packages += 1
+        print packages
+        pos = self.calc_pos(data)
+        cb(pos)

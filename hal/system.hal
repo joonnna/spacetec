@@ -1,14 +1,14 @@
 # components
 #loadrt threads name1=thread1 period1=100000
 #newthread thread1 100000000 #period=10000000000000000000000
-newthread fpthread0 fp 10000000
-newthread fpthread1 fp 10000000
+newthread fpthread fp 10000000
 loadrt muxn count=2
 loadrt limit1 count=2
 loadrt pid count=2 #names=pid
 loadrt bldc cfg=q,q
 loadrt abspos count=2
 loadrt steptrack count=2
+loadrt sigcheck
 
 
 #############################################
@@ -65,6 +65,14 @@ ready rabspos0
 
 #setp abspos.0.old 20
 
+newcomp rsigcheck
+newpin rsigcheck rsigcheck.in bool in
+ready rsigcheck
+
+net sig-to-python rsigcheck.in <= sigcheck.out2
+
+
+# Remote components nets
 net select.0 muxn.0.sel <= rmux0.out
 
 net pos.0 abspos.0.out2 => rabspos0.in
@@ -123,21 +131,19 @@ net reset.1 rabspos1.out => abspos.1.in1
 
 
 # functions #1
-addf abspos.0 fpthread0
-addf steptrack.0 fpthread0
-addf muxn.0 fpthread0
-addf limit1.0 fpthread0
-addf pid.0.do-pid-calcs fpthread0
-addf bldc.0 fpthread0
+addf abspos.0 fpthread
+addf steptrack.0 fpthread
+addf muxn.0 fpthread
+addf limit1.0 fpthread
+addf pid.0.do-pid-calcs fpthread
+addf bldc.0 fpthread
 
-
-# functions #2
-addf abspos.1 fpthread1
-addf steptrack.1 fpthread1
-addf muxn.1 fpthread1
-addf limit1.1 fpthread1
-addf pid.1.do-pid-calcs fpthread1
-addf bldc.1 fpthread1
+addf abspos.1 fpthread
+addf steptrack.1 fpthread
+addf muxn.1 fpthread
+addf limit1.1 fpthread
+addf pid.1.do-pid-calcs fpthread
+addf bldc.1 fpthread
 
 
 start
