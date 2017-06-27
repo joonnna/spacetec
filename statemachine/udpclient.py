@@ -13,12 +13,12 @@ class Udpclient():
 
 
 def main():
-    ip = 192.168.5
-    port = 5015
+    ip = "192.168.5.4"
+    port = 5632
 
     msg = "yoyoyoo bitches"
 
-    client = Udpclient(port, ip):
+    client = Udpclient(port, ip)
 
     client.send_msg(msg)
 
