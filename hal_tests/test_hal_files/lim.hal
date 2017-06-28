@@ -1,0 +1,20 @@
+newthread fpthread fp 10000000
+loadrt limit1
+
+newcomp rlim
+newpin rlim rlim.in float in
+newpin rlim rlim.out0 float out
+newpin rlim rlim.out1 float out
+newpin rlim rlim.out2 float out
+ready rlim
+
+net in limit1.0.in <= rlim.out0
+net max limit1.0.max <= rlim.out1
+net min limit1.0.min <= rlim.out2
+net out limit1.0.out => rlim.in
+
+addf limit1.0 fpthread
+
+start
+
+loadusr haltalk

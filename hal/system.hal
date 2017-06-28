@@ -9,22 +9,19 @@ loadrt bldc cfg=q,q
 loadrt abspos count=2
 loadrt steptrack count=2
 loadrt sigcheck
-
-
-#############################################
-# 1st set of components and their connections
-############################################# 
+loadrt rssi_test
 
 # Test values
-setp muxn.0.in0 5.4
-setp muxn.0.in1 3.4
+#setp muxn.0.in0 5.4
+#setp muxn.0.in1 3.4
 #setp muxn.0.in2 7.4
 
-# signals
 
-# nets
-net init-to-mux => muxn.0.in0
+######################################
+#1st set of components and connections
+######################################
 
+# Net's for 1st set
 net mux-to-lim <= muxn.0.out
 net mux-to-lim => limit1.0.in
 
@@ -43,7 +40,7 @@ net abs-to-step <= abspos.0.out1
 net abs-to-step => steptrack.0.in0
 
 net step-to-mux <= steptrack.0.out
-net step-to-mux => muxn.0.in1
+net step-to-mux => muxn.0.in0
 
 #net test-to-abs => abspos.0.in
 
@@ -55,7 +52,8 @@ setp pid.0.Igain 1
 
 # Remote components
 newcomp rmux0
-newpin rmux0 rmux0.out s32 out
+newpin rmux0 rmux0.out0 s32 out
+newpin rmux0 rmux0.out1 float out
 ready rmux0
 
 newcomp rabspos0
@@ -63,32 +61,19 @@ newpin rabspos0 rabspos0.in float in
 newpin rabspos0 rabspos0.out float out
 ready rabspos0
 
-#setp abspos.0.old 20
 
-newcomp rsigcheck
-newpin rsigcheck rsigcheck.in bit in
-ready rsigcheck
-
-net sig-to-python rsigcheck.in <= sigcheck.0.out2
-
-
-# Remote components nets
-net select.0 muxn.0.sel <= rmux0.out
+net select.0 muxn.0.sel <= rmux0.out0
+net az.0 muxn.0.in1 <= rmux0.out1
 
 net pos.0 abspos.0.out2 => rabspos0.in
 net reset.0 rabspos0.out => abspos.0.in1
 
 
-#############################################
-# 2st set of components and their connections
-############################################# 
+######################################
+#2th set of components and connections
+######################################
 
-# nets
-net init-to-mux.1 => muxn.1.in0
-
-net mux-to-lim.1 <= muxn.1.out
-net mux-to-lim.1 => limit1.1.in
-
+# Net's for 2th set
 net lim-to-pid.1 <= limit1.1.out
 net lim-to-pid.1 => pid.1.command
 
@@ -104,9 +89,7 @@ net abs-to-step.1 <= abspos.1.out1
 net abs-to-step.1 => steptrack.1.in0
 
 net step-to-mux.1 <= steptrack.1.out
-net step-to-mux.1 => muxn.1.in1
-
-#net test-to-abs => abspos.0.in
+net step-to-mux.1 => muxn.1.in0
 
 # parameter values
 setp limit1.1.max 1
@@ -116,7 +99,8 @@ setp pid.1.Igain 1
 
 # Remote components
 newcomp rmux1
-newpin rmux1 rmux1.out s32 out
+newpin rmux1 rmux1.out0 s32 out
+newpin rmux1 rmux1.out1 float out
 ready rmux1
 
 newcomp rabspos1
@@ -124,13 +108,29 @@ newpin rabspos1 rabspos1.in float in
 newpin rabspos1 rabspos1.out float out
 ready rabspos1
 
-net select.1 muxn.1.sel <= rmux1.out
+net select.1 muxn.1.sel <= rmux1.out0
+net el.1 muxn.1.in1 <= rmux1.out1
 
 net pos.1 abspos.1.out2 => rabspos1.in
 net reset.1 rabspos1.out => abspos.1.in1
 
 
+##########################
+#Single components
+##########################
+
+newcomp rsigcheck
+newpin rsigcheck rsigcheck.in bit in
+ready rsigcheck
+
+net sig-to-python rsigcheck.in <= sigcheck.0.out2
+net rssi-to-sig sigcheck.0.in <= rssi-test.0.out
+
+
 # functions #1
+addf rssi-test.0 fpthread
+addf sigcheck.0 fpthread
+
 addf abspos.0 fpthread
 addf steptrack.0 fpthread
 addf muxn.0 fpthread

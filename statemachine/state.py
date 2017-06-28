@@ -15,6 +15,8 @@ class Statemachine():
 
         self.filepath = pos_file
         pos = self.read_init_pos()
+        self.init_az = pos[0]
+        self.init_el = pos[1]
 
         self.sd = ServiceDiscovery()
         self.halrcomps = {}
@@ -28,11 +30,13 @@ class Statemachine():
 
     def initrcomps(self):
         mux0 = halremote.RemoteComponent("rmux0", debug=False)
-        select0 = mux0.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
+        mux0.newpin("out0", halremote.HAL_S32, halremote.HAL_OUT)
+        mux0.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
         mux0.on_connected_changed.append(self._connected)
 
         mux1 = halremote.RemoteComponent("rmux1", debug=False)
-        select1 = mux1.newpin("out", halremote.HAL_S32, halremote.HAL_OUT)
+        mux1.newpin("out0", halremote.HAL_S32, halremote.HAL_OUT)
+        mux1.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
         mux1.on_connected_changed.append(self._connected)
 
         abspos0 = halremote.RemoteComponent("rabspos0", debug=False)
@@ -56,8 +60,9 @@ class Statemachine():
         self.halrcomps[abspos1.name] = abspos1
         self.halrcomps[sigcheck.name] = sigcheck
 
-    def change_state(self):
-        sig = self.halrcomps["rsigcheck"].getpin("in").get()
+    def change_state(self, sig):
+        print "val is :", sig
+        #sig = self.halrcomps["rsigcheck"].getpin("in").get()
         if sig:
             self.halrcomps["rmux0"].getpin("out").set(1)
             self.halrcomps["rmux1"].getpin("out").set(1)
@@ -120,11 +125,14 @@ class Statemachine():
             time.sleep(5)
 
     def send_pos(self, pos):
+        az = self.init_az + pos[0]
+        el = self.init_el + pos[1]
+
         mux0 = self.halrcomps["rmux0"]
-        mux0.getpin("out").set(pos[0])
+        mux0.getpin("out").set(az)
 
         mux1 = self.halrcomps["rmux1"]
-        mux1.getpin("out").set(pos[1])
+        mux1.getpin("out").set(el)
 
 
     def start_pos_thread(self):

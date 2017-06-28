@@ -1,0 +1,20 @@
+newthread fpthread fp 10000000
+loadrt muxn
+
+newcomp rmux
+newpin rmux rmux.in float in
+newpin rmux rmux.out0 s32 out
+newpin rmux rmux.out1 float out
+newpin rmux rmux.out2 float out
+ready rmux
+
+net select muxn.0.sel <= rmux.out0
+net val1 muxn.0.in0 <= rmux.out1
+net val2 muxn.0.in1 <= rmux.out2
+net out muxn.0.out => rmux.in
+
+addf muxn.0 fpthread
+
+start
+
+loadusr haltalk

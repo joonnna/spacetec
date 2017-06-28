@@ -2,9 +2,9 @@ component steptrack "Steptrack algorithm";
 pin in float in0;
 pin in float in1;
 pin out float out;
-param rw float prev_strength prev;
-param rw bool direction;
-param r float step_length;
+param rw float prev;
+param rw bit direction;
+param r float step_length = 1.0;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
