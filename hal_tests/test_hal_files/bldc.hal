@@ -1,0 +1,19 @@
+newthread fpthread fp 10000000
+loadrt bldc cfg=nT
+
+newcomp outcomp
+newpin outcomp outcomp.out float out
+ready outcomp
+
+newcomp incomp
+newpin incomp incomp.in float in
+ready incomp
+
+net in outcomp.out bldc.0.value
+net out bldc.0.out incomp.in
+
+addf bldc.0 fpthread
+
+start
+
+loadusr haltalk

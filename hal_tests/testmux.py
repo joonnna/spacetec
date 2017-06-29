@@ -1,38 +1,48 @@
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
-from mastertest import *
+from hal_test_base_class import *
 import time
 
 
-class MuxTest(MasterTest):
+class MuxTest(HalBaseTest):
     def init(self):
         self.halfile = "test_hal_files/mux.hal"
-        self.mux = halremote.RemoteComponent("rmux", debug=False)
-        self.input = self.mux.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
-        self.select = self.mux.newpin("out0", halremote.HAL_S32, halremote.HAL_OUT)
-        self.out1 = self.mux.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        self.out2 = self.mux.newpin("out2", halremote.HAL_FLOAT, halremote.HAL_OUT)
+
+        self.input = self.incomp.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
+
+        self.out0 = self.outcomp.newpin("out0", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        self.out1 = self.outcomp.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        self.select = self.outcomp.newpin("select", halremote.HAL_S32, halremote.HAL_OUT)
 
         self.input.on_value_changed.append(self.wait_callback)
 
-        self.rcomps.append(self.mux)
-
-    def test_connection(self):
-        for rcomp in self.rcomps:
-            rcomp.wait_connected(timeout=self.timeWait)
-            self.assertTrue(rcomp.connected)
-
     def test_input_selection(self):
-        val = 20.0
-        val2 = 30.0
-        self.out1.set(val)
-        self.out2.set(val2)
-        self.select.set(1)
+        val0 = 20.0
+        val1 = 30.0
 
-        self.assertEqual(val, self.out1.get())
+        self.out0.set(val0)
+        self.assertFalse(self.out0.synced)
+
+        self.out1.set(val1)
+        self.assertFalse(self.out1.synced)
+
+        self.select.set(1)
+        self.assertFalse(self.select.synced)
+
+        #Ensure values are synced
+        time.sleep(self.timeWait)
+
+        self.assertTrue(self.out0.synced)
+        self.assertTrue(self.out1.synced)
+        self.assertTrue(self.select.synced)
+
+        out1 = self.out1.get()
+        self.assertEqual(val1, out1)
 
         self.wait()
-        self.assertEqual(self.out1.get(), self.input.get())
+        self.assertTrue(self.input.synced)
+        self.assertEqual(out1, self.input.get())
+
 
 if __name__ == '__main__':
     unittest.main()

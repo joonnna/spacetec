@@ -3,24 +3,22 @@ pin in float in0;
 pin in float in1;
 pin out float out0;
 pin out float out1;
-pin out float out2;
+pin out float out2; //Testpin for reseting old pos
 param rw float old;
 param rw float prev_update;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-float tmp = in0;
-float tmp2 = in1;
-if (prev_update != tmp2)
+if (prev_update != in1 && in1 != 0.0) 
 {
-    old = tmp2;
-    prev_update = tmp2;
-    out0 = tmp + old;
+    old = in1;
+    prev_update = in1;
+    out0 = in0 + old;
 }
 else
 {
-    out0 = tmp + old;
-    old = tmp;
+    out0 = in0 + old;
+    old = in0;
 }
-out1 = out0;
-out2 = old;
+out1 = old;
+out2 = prev_update;

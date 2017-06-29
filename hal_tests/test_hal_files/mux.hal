@@ -1,17 +1,20 @@
 newthread fpthread fp 10000000
 loadrt muxn
 
-newcomp rmux
-newpin rmux rmux.in float in
-newpin rmux rmux.out0 s32 out
-newpin rmux rmux.out1 float out
-newpin rmux rmux.out2 float out
-ready rmux
+newcomp outcomp
+newpin outcomp outcomp.out0 float out
+newpin outcomp outcomp.out1 float out
+newpin outcomp outcomp.select s32 out
+ready outcomp
 
-net select muxn.0.sel <= rmux.out0
-net val1 muxn.0.in0 <= rmux.out1
-net val2 muxn.0.in1 <= rmux.out2
-net out muxn.0.out => rmux.in
+newcomp incomp
+newpin incomp incomp.in float in
+ready incomp
+
+net select outcomp.select muxn.0.sel
+net val1 outcomp.out0 muxn.0.in0
+net val2 outcomp.out1 muxn.0.in1
+net out muxn.0.out incomp.in
 
 addf muxn.0 fpthread
 

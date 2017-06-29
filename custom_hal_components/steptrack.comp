@@ -2,6 +2,7 @@ component steptrack "Steptrack algorithm";
 pin in float in0;
 pin in float in1;
 pin out float out;
+pin out float test; //testpin for storing prev val
 param rw float prev;
 param rw bit direction;
 param r float step_length = 1.0;
@@ -29,3 +30,4 @@ else
         out = in1 - step_length;
 }
 prev = in0;
+test = prev;

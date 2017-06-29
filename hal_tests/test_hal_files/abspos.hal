@@ -1,0 +1,26 @@
+newthread fpthread fp 10000000
+loadrt abspos
+
+newcomp outcomp
+newpin outcomp outcomp.out0 float out
+newpin outcomp outcomp.out1 float out
+ready outcomp
+
+newcomp incomp
+newpin incomp incomp.in0 float in
+newpin incomp incomp.in1 float in
+newpin incomp incomp.in2 float in
+ready incomp
+
+net qdec outcomp.out0 abspos.0.in0
+net reset outcomp.out1 abspos.0.in1
+
+net out abspos.0.out0 incomp.in0
+net pos abspos.0.out1 incomp.in1
+net prev abspos.0.out2 incomp.in2
+
+addf abspos.0 fpthread
+
+start
+
+loadusr haltalk

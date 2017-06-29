@@ -1,23 +1,25 @@
 newthread fpthread fp 10000000
-loadrt limit1
+loadrt pid
 
 newcomp outcomp
 newpin outcomp outcomp.out0 float out
 newpin outcomp outcomp.out1 float out
 newpin outcomp outcomp.out2 float out
+newpin outcomp outcomp.out3 float out
 ready outcomp
 
 newcomp incomp
 newpin incomp incomp.in float in
 ready incomp
 
+net comm outcomp.out0 pid.0.command
+net feed outcomp.out1 pid.0.feedback
+net pgain outcomp.out2 pid.0.Pgain
+net igain outcomp.out3 pid.0.Igain
 
-net in outcomp.out0 limit1.0.in
-net max outcomp.out1 limit1.0.max
-net min outcomp.out2 limit1.0.min
-net out limit1.0.out incomp.in
+net out pid.0.output incomp.in
 
-addf limit1.0 fpthread
+addf pid.0.do-pid-calcs fpthread
 
 start
 
