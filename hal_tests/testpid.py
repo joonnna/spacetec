@@ -40,22 +40,30 @@ class PidTest(HalBaseTest):
         self.assertTrue(self.pgain.synced)
         self.assertEqual(self.pgain.get(), val)
 
+    #TODO getting no output atm, fix plz
     def test_input_output(self):
         command = 5.0
         feedback = 6.0
+        igain = 20.0
+        pgain = 25.0
+
 
         self.command.set(command)
         self.feedback.set(feedback)
-
-        self.assertFalse(self.command.synced)
-        self.assertFalse(self.feedback.synced)
+        self.pgain.set(pgain)
+        self.igain.set(pgain)
 
         time.sleep(self.timeWait)
 
         self.assertTrue(self.command.synced)
         self.assertTrue(self.feedback.synced)
+        self.assertTrue(self.pgain.synced)
+        self.assertTrue(self.igain.synced)
 
-        print self.input.get()
+        self.wait()
+        self.assertTrue(self.input.synced)
+
+        self.assertNotEqual(self.input.value, 0.0)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,8 @@
 newthread fpthread fp 10000000
 loadrt steptrack
 
+#setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
+
 newcomp outcomp
 newpin outcomp outcomp.out0 float out
 newpin outcomp outcomp.out1 float out
@@ -9,6 +11,7 @@ ready outcomp
 newcomp incomp
 newpin incomp incomp.in0 float in
 newpin incomp incomp.test float in
+newpin incomp incomp.dir bit in
 ready incomp
 
 net in0 outcomp.out0 steptrack.0.in0
@@ -16,6 +19,7 @@ net in1 outcomp.out1 steptrack.0.in1
 
 net out steptrack.0.out incomp.in0
 net test steptrack.0.test incomp.test
+net dir steptrack.0.dir incomp.dir
 
 addf steptrack.0 fpthread
 

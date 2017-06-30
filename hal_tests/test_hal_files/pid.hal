@@ -19,6 +19,8 @@ net igain outcomp.out3 pid.0.Igain
 
 net out pid.0.output incomp.in
 
+setp pid.0.enable true
+
 addf pid.0.do-pid-calcs fpthread
 
 start

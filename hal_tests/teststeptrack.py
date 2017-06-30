@@ -9,6 +9,7 @@ class SteptrackTest(HalBaseTest):
         self.halfile = "test_hal_files/steptrack.hal"
 
         self.input = self.incomp.newpin("in0", halremote.HAL_FLOAT, halremote.HAL_IN)
+        self.direction = self.incomp.newpin("dir", halremote.HAL_BIT, halremote.HAL_IN)
         self.prev = self.incomp.newpin("test", halremote.HAL_FLOAT, halremote.HAL_IN)
 
         self.out0 = self.outcomp.newpin("out0", halremote.HAL_FLOAT, halremote.HAL_OUT)
@@ -16,6 +17,7 @@ class SteptrackTest(HalBaseTest):
 
         self.input.on_value_changed.append(self.wait_callback)
         self.prev.on_value_changed.append(self.wait_callback)
+        self.direction.on_value_changed.append(self.wait_callback)
 
     def test_normal_step(self):
         sig_strength = 5.0
@@ -23,6 +25,7 @@ class SteptrackTest(HalBaseTest):
 
         new_pos = self.step(sig_strength, prev_pos)
 
+        print prev_pos, new_pos
         #Direction is initially false(steps in "negative direction")
         self.assertLess(new_pos, prev_pos)
 
@@ -69,11 +72,39 @@ class SteptrackTest(HalBaseTest):
         self.assertNotEqual(prev_sig_strength, sig_strength)
         self.assertEqual(prev_sig_strength, new_sig)
 
-    """
-    def test_change_direction(self):
-        pass
 
-    """
+    def test_change_direction(self):
+        prev_pos = 10.0
+        sig_strength = 5.0
+
+        pos = self.step(sig_strength, prev_pos)
+
+        new_sig = 3.0
+
+        final_pos = self.step(new_sig, pos)
+
+        self.wait()
+        self.assertTrue(self.direction.synced)
+        #Will move in negative(false) direction to begin with
+        #Assert that it changes to true when signal strength lowers
+        self.assertTrue(self.direction.get())
+        self.assertGreater(final_pos, pos)
+
+    #Receives -1.0 sig strength when alternating, want to repeat same output in that case
+    def test_alternate_val(self):
+        prev_pos = 10.0
+        sig_strength = 5.0
+
+        pos = self.step(sig_strength, prev_pos)
+
+        alternate = -1.0
+
+        final_pos = self.step(alternate, pos)
+
+        self.wait()
+        self.assertTrue(self.input.synced)
+        self.assertEqual(final_pos, pos)
+
 
     def step(self, sig_strength, prev_pos):
         self.out0.set(sig_strength)

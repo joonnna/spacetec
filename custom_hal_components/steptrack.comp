@@ -3,31 +3,42 @@ pin in float in0;
 pin in float in1;
 pin out float out;
 pin out float test; //testpin for storing prev val
+pin out bit dir; //testpin for direction
 param rw float prev;
+param rw float prev_out;
 param rw bit direction;
-param r float step_length = 1.0;
+param rw float step_length = 1.0;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-if (prev > in0)
+if (in0 != -1.0)
 {
-    if (direction)
+    if (prev > in0)
     {
-        out = in1 - step_length;
-        direction = false;
+        if (direction)
+        {
+            out = in1 - step_length;
+            direction = false;
+        }
+        else
+        {
+            out = in1 + step_length;
+            direction = true;
+        }
     }
     else
     {
-        out = in1 + step_length;
-        direction = true;
+        if (direction)
+            out = in1 + step_length;
+        else
+            out = in1 - step_length;
     }
+    prev = in0;
+    test = prev;
+    prev_out = out;
 }
 else
 {
-    if (direction)
-        out = in1 + step_length;
-    else
-        out = in1 - step_length;
+    out = prev_out;
 }
-prev = in0;
-test = prev;
+dir = direction;

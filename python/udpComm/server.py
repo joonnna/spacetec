@@ -58,16 +58,14 @@ class Communication():
             process(report)
         """
 
-def run(ip, port, cb):
+    def run(self, cb):
+        print "Starting udp server"
+        #self.gps_test()
+        packages = 0
+        while True:
+            data = self.receive_data()
+            packages += 1
+ #          print packages
+            pos = self.calc_pos(data)
+            cb(pos)
 
-    comm = Communication(port, ip)
-
-    #self.gps_test()
-
-    packages = 0
-    while True:
-        data = comm.receive_data()
-        packages += 1
- #       print packages
-        pos = comm.calc_pos(data)
-        cb(pos)

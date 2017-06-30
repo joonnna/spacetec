@@ -1,6 +1,7 @@
 from machinekit import launcher
 
 def start_hal(path):
+    config_path = "../configs/test_config.ini"
     launcher.check_installation()
     launcher.cleanup_session()  # kill any running Machinekit instances
     launcher.start_realtime()  # start Machinekit realtime environment

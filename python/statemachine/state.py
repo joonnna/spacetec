@@ -3,7 +3,6 @@ import sys
 import thread
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
-import comm
 
 init = 0
 operational = 1
@@ -145,33 +144,17 @@ class Statemachine():
         print("discovered %s %s %s" % (data.name, data.dsn, data.uuid))
         self.sd(data.uuid)
 
+    def run(self, comm):
+        thread.start_new_thread(comm, (self.send_pos,))
 
-def run(posfile):
+        try:
+            while True:
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass
 
-    ip = "192.168.5.4"
-    port = 5632
+        self.sd.stop()
 
-    sm = Statemachine(posfile)
-    thread.start_new_thread(comm.run, (ip, port, sm.send_pos))
+        sys.exit(0)
 
-    #time.sleep(5)
-
-    #sm.halrcomps["rmux0"].getpin("out").set(1)
-
-    #sm.set_pos(4, 10)
-
-    #time.sleep(10)
-
-    #sm.set_pos(24, 48)
-
-    try:
-        while True:
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        pass
-
-    sm.sd.stop()
-
-    sys.exit(0)
-
-    print ("Stopped")
+        print ("Stopped")

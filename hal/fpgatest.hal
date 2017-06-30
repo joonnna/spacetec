@@ -1,17 +1,24 @@
 ## components
 loadrt hostmot2
+
 #loadrt hm2_soc_ol config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.7I76_7I85S_GPIO_GPIO.dtbo" num_encoders=2 num_3pwmgens=2
 #newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.7I76_7I85S_GPIO_GPIO.dtbo" num_encoders=2 num_3pwmgens=2
+
 # this one "works"
-newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.7I76_7I76_7I76_7I76.dtbo" num_3pwmgens=2 num_encoders=2
-#loadrt hm2_soc_ol  config="num_pwmgens=2"
-#newinst hm2_soc_ol hm2-socfpga0 num_encoders=2 num_3pwmgens=2
+#newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.7I76_7I76_7I76_7I76.dtbo" num_3pwmgens=2 num_encoders=2
+
+# the A. Volkov one (with pwmgen)
+#newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.A_Volkov.dtbo" 
+
+# trying to use .ini file 
+newinst [HOSTMOT2](DRIVER) [HOSTMOT2](DEVNAME) -- config=[HOSTMOT2](CONFIG)
+
 loadrt threads name1=servo-thread period1=1000000
 
 ## nets
 
 ## parameter values
-setp hm2_de0n.0.led.CR02 TRUE
+#setp hm2_de0n.0.led.CR02 TRUE
 
 ## realtime thread/function links
 #addf hm2_de0n.0.read servo-thread

@@ -1,0 +1,24 @@
+newthread fpthread fp 10000000
+loadrt sigcheck
+
+newcomp outcomp
+newpin outcomp outcomp.out float out
+ready outcomp
+
+newcomp incomp
+newpin incomp incomp.in0 float in
+newpin incomp incomp.in1 float in
+newpin incomp incomp.lim bit in
+ready incomp
+
+net out-to-sig outcomp.out sigcheck.0.in
+
+net lim sigcheck.0.out2 incomp.lim
+net out0 sigcheck.0.out0 incomp.in0
+net out1 sigcheck.0.out1 incomp.in1
+
+addf sigcheck.0 fpthread
+
+start
+
+loadusr haltalk

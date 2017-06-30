@@ -3,23 +3,25 @@ pin in float in;
 pin out float out0;
 pin out float out1;
 pin out bit out2;
-param r float sig_limit = 3.0;
+param rw float sig_limit = 3.0;
 param rw bit axis;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-if (in < sig_limit)
-    out2 = true;
-else
+if (in > sig_limit)
     out2 = false;
+else
+    out2 = true;
 
 if (axis)
 {
     out0 = in;
+    out1 = -1.0;
     axis = false;
 }
 else
 {
     out1 = in;
+    out0 = -1.0;
     axis = true;
 }

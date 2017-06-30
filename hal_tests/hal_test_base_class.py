@@ -32,11 +32,11 @@ class HalBaseTest(unittest.TestCase):
         self.incomp = halremote.RemoteComponent("incomp", debug=False)
         self.outcomp = halremote.RemoteComponent("outcomp", debug=False)
 
-
-        self.rcomps.append(self.incomp)
         self.rcomps.append(self.outcomp)
+        self.rcomps.append(self.incomp)
 
         self.init()
+
         start_hal(self.halfile)
 
         for rcomp in self.rcomps:
@@ -51,9 +51,13 @@ class HalBaseTest(unittest.TestCase):
             rcomp.wait_connected(timeout=self.timeWait)
             self.assertTrue(rcomp.connected)
 
-
     def tearDown(self):
         self.sd.stop()
         for rcomp in self.rcomps:
+            rcomp.remove_pins()
             rcomp.set_disconnected()
+        self.rcomps = []
+        self.incomp = 0
+        self.outcomp = 0
+
         shutdown_hal()
