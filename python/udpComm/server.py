@@ -1,7 +1,8 @@
 import socket
 import math
 import gps
-
+import thread
+import time
 
 class Communication():
     def __init__(self, port, ip):
@@ -10,12 +11,18 @@ class Communication():
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((ip, port))
 
-        self.long_start = 171
-        self.long_end = 180
-        self.lat_start = 182
-        self.lat_end = 190
-        self.height_start = 192
-        self.height_end = 198
+
+        self.lock = thread.allocate_lock()
+        self.loc_lat    = 0.0
+        self.loc_long   = 0.0
+        self.loc_height = 0.0
+
+        self.long_start     = 171
+        self.long_end       = 180
+        self.lat_start      = 182
+        self.lat_end        = 190
+        self.height_start   = 192
+        self.height_end     = 198
 
 
     def receive_data(self):
@@ -28,15 +35,17 @@ class Communication():
         latitude = float(data[self.lat_start:self.lat_end])
         height = float(data[self.height_start:self.height_end])
 
-        loc_long = 5.4
-        loc_lat = 3.5
-        loc_height = 2.7
+        self.lock.acquire()
+        loc_long = self.loc_long
+        loc_lat = self.loc_lat
+        loc_height = self.loc_height
+        self.lock.release()
 
         x = longtitude - loc_long
         y = latitude - loc_lat
         z = height - loc_height
 
-        r = math.sqrt((x^2 + y^2 + z^2))
+        r = math.sqrt((x*x + y*y + z*z))
 
         el_rad = math.acos((z/r))
         el_deg = math.degrees(el_rad)
@@ -47,25 +56,40 @@ class Communication():
         return az_deg, el_deg
 
     def gps_test(self):
-        pass
-        #gpsd
-
-        """
+        print "Starting gps thread"
         session = gps.gps(host="localhost", port="2947")
         session.stream(flags=gps.WATCH_JSON)
 
-        for report in session:
-            process(report)
-        """
+        while True:
+            self.lock.acquire()
+            self.loc_lat    = session.fix.latitude
+            self.loc_long   = session.fix.longitude
+            self.loc_height = session.fix.altitude
+
+            if math.isnan(self.loc_height):
+                self.loc_height = 0.0
+
+
+            print self.loc_lat
+            print self.loc_long
+            print self.loc_height
+
+            self.lock.release()
+
+            time.sleep(20)
+        #for report in session:
+        #    print report
 
     def run(self, cb):
         print "Starting udp server"
-        #self.gps_test()
+
+        thread.start_new_thread(self.gps_test, ())
         packages = 0
+
         while True:
             data = self.receive_data()
             packages += 1
- #          print packages
+            print packages
             pos = self.calc_pos(data)
             cb(pos)
 
