@@ -27,13 +27,21 @@ class Communication():
 
     def receive_data(self):
         data, addr = self.socket.recvfrom(500)
-        return data
-
-    def calc_pos(self, data):
 
         longtitude = float(data[self.long_start:self.long_end])
         latitude = float(data[self.lat_start:self.lat_end])
         height = float(data[self.height_start:self.height_end])
+
+        return (longtitude, latitude, height)
+
+    def shutdown(self):
+        self.socket.close()
+
+    def calc_pos(self, data):
+
+        longtitude  = data[0]
+        latitude    = data[1]
+        height      = data[2]
 
         self.lock.acquire()
         loc_long = self.loc_long
@@ -86,10 +94,12 @@ class Communication():
         thread.start_new_thread(self.gps_test, ())
         packages = 0
 
-        while True:
-            data = self.receive_data()
-            packages += 1
-            print packages
-            pos = self.calc_pos(data)
-            cb(pos)
+        try:
+            while True:
+                data = self.receive_data()
+                packages += 1
+                pos = self.calc_pos(data)
+                cb(pos)
 
+        except SystemExit:
+            self.shutdown()

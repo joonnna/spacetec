@@ -22,8 +22,9 @@ class Statemachine():
         self.initrcomps()
         self.search_and_bind()
 
+        self.pos_thread_timeout = 5.0
         self.set_pos(pos[0], pos[1])
-        self.start_pos_thread()
+        self.pos_thread = self.start_pos_thread()
 
         self.state = operational
 
@@ -116,12 +117,15 @@ class Statemachine():
             p0, p1 = self.get_pos()
             try:
                 f = open(self.filepath, "w")
-                f.write("3.4\n5.4")
+                f.write("%f\n%f", p0, p1)
                 f.close()
             except IOError:
                 print "Can't save position, should restart"
+            except SystemExit:
+                if not f.closed:
+                    f.close()
 
-            time.sleep(5)
+            time.sleep(self.pos_thread_timeout)
 
     def send_pos(self, pos):
         az = self.init_az + pos[0]
@@ -145,11 +149,14 @@ class Statemachine():
         self.sd(data.uuid)
 
     def run(self, comm):
-        thread.start_new_thread(comm, (self.send_pos,))
+        self.com_thread = thread.start_new_thread(comm, (self.send_pos,))
 
         try:
             while True:
                 time.sleep(0.5)
+        except SystemExit:
+            self.com_thread.exit()
+            self.pos_thread.exit()
         except KeyboardInterrupt:
             pass
 
