@@ -1,5 +1,6 @@
 import time
 import argparse
+from general_thread import *
 from machinekit import launcher
 from statemachine.state import *
 from udpComm.server import *
@@ -7,7 +8,8 @@ from udpComm.server import *
 def start(path, ip, port):
     sm = Statemachine(path)
     comm = Communication(port, ip)
-    sm.run(comm.run)
+    comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_pos)
+    sm.run(comm_thread)
 
 
 parser = argparse.ArgumentParser()

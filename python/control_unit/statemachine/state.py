@@ -1,8 +1,9 @@
 import time
 import sys
-import thread
+from general_thread import *
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
+
 
 init = 0
 operational = 1
@@ -14,17 +15,22 @@ class Statemachine():
 
         self.filepath = pos_file
         pos = self.read_init_pos()
-        self.init_az = pos[0]
-        self.init_el = pos[1]
+
+        az = pos[0]
+        el = pos[1]
+
+        self.init_az = az
+        self.init_el = el
 
         self.sd = ServiceDiscovery()
         self.halrcomps = {}
         self.initrcomps()
-        self.search_and_bind()
+        self._search_and_bind()
 
         self.pos_thread_timeout = 5.0
-        self.set_pos(pos[0], pos[1])
-        self.pos_thread = self.start_pos_thread()
+        self.reset_pos(az, el)
+        self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
+        self.pos_thread.start()
 
         self.state = operational
 
@@ -32,26 +38,21 @@ class Statemachine():
         mux0 = halremote.RemoteComponent("rmux0", debug=False)
         mux0.newpin("out0", halremote.HAL_S32, halremote.HAL_OUT)
         mux0.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        mux0.on_connected_changed.append(self._connected)
 
         mux1 = halremote.RemoteComponent("rmux1", debug=False)
         mux1.newpin("out0", halremote.HAL_S32, halremote.HAL_OUT)
         mux1.newpin("out1", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        mux1.on_connected_changed.append(self._connected)
 
         abspos0 = halremote.RemoteComponent("rabspos0", debug=False)
         abspos0.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos0.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
-        abspos0.on_connected_changed.append(self._connected)
 
         abspos1 = halremote.RemoteComponent("rabspos1", debug=False)
         abspos1.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos1.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
-        abspos1.on_connected_changed.append(self._connected)
 
         sigcheck = halremote.RemoteComponent("rsigcheck", debug=False)
         sig = sigcheck.newpin("in", halremote.HAL_BIT, halremote.HAL_IN)
-        sigcheck.on_connected_changed.append(self._connected)
         sig.on_value_changed.append(self.change_state)
 
         self.halrcomps[mux0.name] = mux0
@@ -61,20 +62,18 @@ class Statemachine():
         self.halrcomps[sigcheck.name] = sigcheck
 
     def change_state(self, sig):
-        print "val is :", sig
-        #sig = self.halrcomps["rsigcheck"].getpin("in").get()
         if sig:
-            self.halrcomps["rmux0"].getpin("out").set(1)
-            self.halrcomps["rmux1"].getpin("out").set(1)
+            self.halrcomps["rmux0"].getpin("out1").set(1)
+            self.halrcomps["rmux1"].getpin("out1").set(1)
             self.state = gps
             print "Entered gps state"
         else:
-            self.halrcomps["rmux0"].getpin("out").set(0)
-            self.halrcomps["rmux1"].getpin("out").set(0)
+            self.halrcomps["rmux0"].getpin("out1").set(0)
+            self.halrcomps["rmux1"].getpin("out1").set(0)
             self.state = operational
             print "Entered operational state"
 
-    def search_and_bind(self):
+    def _search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
             self.sd.register(rcomp)
 
@@ -93,9 +92,9 @@ class Statemachine():
             print "Initial pos file not found! Exiting"
             sys.exit(1)
 
-        return pos[0], pos[1]
+        return float(pos[0]), float(pos[1])
 
-    def set_pos(self, pos0, pos1):
+    def reset_pos(self, pos0, pos1):
         abspos0 = self.halrcomps["rabspos0"]
         abspos0.getpin("out").set(pos0)
 
@@ -112,20 +111,30 @@ class Statemachine():
 
         return pos0, pos1
 
-    def save_pos(self):
-        while True:
-            p0, p1 = self.get_pos()
-            try:
-                f = open(self.filepath, "w")
-                f.write("%f\n%f", p0, p1)
-                f.close()
-            except IOError:
-                print "Can't save position, should restart"
-            except SystemExit:
-                if not f.closed:
-                    f.close()
+    def store_old_abspos(self):
+        p0, p1 = self.get_pos()
+        try:
+            f = open(self.filepath, "w")
+            f.write(("%f\n%f" % (p0, p1)))
+            f.close()
+        except IOError:
+            print "Can't save position, should restart"
 
-            time.sleep(self.pos_thread_timeout)
+    def cleanup_abspos_thread(self):
+        try:
+            f = open(self.filepath, "r")
+            pos = f.read()
+            f.close()
+        except IOError:
+            print "Couldn't open position file during cleanup..."
+            return
+
+        #If file was altered somehow after initiating cleanup (not likely)
+        if len(pos) < 2:
+            fw = open(self.filepath, "w")
+            old_pos = self.get_pos()
+            fw.write(("%f\n%f" % (old_pos[0], old_pos[1])))
+            fw.close()
 
     def send_pos(self, pos):
         az = self.init_az + pos[0]
@@ -138,30 +147,36 @@ class Statemachine():
         mux1.getpin("out").set(el)
 
 
-    def start_pos_thread(self):
-        return thread.start_new_thread(self.save_pos, ())
-
     def _connected(self, connected):
         print('Remote component connected: %s' % str(connected))
 
-    def service_discovered(self, data):
+    def _service_discovered(self, data):
         print("discovered %s %s %s" % (data.name, data.dsn, data.uuid))
         self.sd(data.uuid)
 
-    def run(self, comm):
-        self.com_thread = thread.start_new_thread(comm, (self.send_pos,))
+    def cleanup(self):
+        self.sd.stop()
+        self.pos_thread.stop()
+        self.comm_thread.stop()
+
+        self.comm_thread.join()
+        self.pos_thread.join()
+
+        print "Stopped"
+
+    def run(self, thread, event=None):
+        self.comm_thread = thread
+        self.comm_thread.start()
 
         try:
             while True:
                 time.sleep(0.5)
-        except SystemExit:
-            self.com_thread.exit()
-            self.pos_thread.exit()
+
+                #If executed as secondary thread instead of main thread
+                if event != None:
+                    if event.isSet():
+                        break
         except KeyboardInterrupt:
             pass
 
-        self.sd.stop()
-
-        sys.exit(0)
-
-        print ("Stopped")
+        self.cleanup()

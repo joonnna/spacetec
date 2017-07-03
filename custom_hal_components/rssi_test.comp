@@ -5,4 +5,4 @@ function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
 old = (old + 1) % 5;
-out = old;
+out = 4;
