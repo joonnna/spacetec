@@ -1,8 +1,10 @@
 component rssi_test "Rssi test";
+pin in float in;
 pin out float out;
 param rw s32 old;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-old = (old + 1) % 5;
-out = 4;
+out = in;
+//old = (old + 1) % 5;
+//out = 4;

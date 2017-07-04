@@ -11,5 +11,5 @@ def start_hal(path):
     launcher.ensure_mklauncher()  # ensure mklauncher is started
 
 def shutdown_hal():
-    #launcher.end_session()
-    launcher.cleanup_session()
+    launcher.end_session()
+ #   launcher.cleanup_session()

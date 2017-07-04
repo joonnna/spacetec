@@ -6,7 +6,7 @@ loadrt bldc cfg=q,q #Probably wrong config
 loadrt abspos count=2
 loadrt steptrack count=2
 loadrt sigcheck
-#loadrt rssi_test
+loadrt rssi_test
 
 # Test values
 #setp muxn.0.in0 5.4
@@ -46,6 +46,12 @@ newpin rabspos0 rabspos0.in float in
 newpin rabspos0 rabspos0.out float out
 ready rabspos0
 
+newcomp rbldc0
+newpin rbldc0 rbldc0.in float in
+ready rbldc0
+
+net bldc-out0 bldc.0.out rbldc0.in
+
 net sel.0 rmux0.out0 muxn.0.sel
 net az rmux0.out1 muxn.0.in1
 
@@ -84,9 +90,15 @@ newpin rabspos1 rabspos1.in float in
 newpin rabspos1 rabspos1.out float out
 ready rabspos1
 
+
+newcomp rbldc1
+newpin rbldc1 rbldc1.in float in
+ready rbldc1
+
+net bldc-out1 bldc.1.out rbldc1.in
+
 net sel.1 rmux1.out0 muxn.1.sel
 net el rmux1.out1 muxn.1.in1
-
 
 net oldpos.1 abspos.1.out2 rabspos1.in
 net reset.1 rabspos1.out abspos.1.in1
@@ -96,15 +108,23 @@ net reset.1 rabspos1.out abspos.1.in1
 #Single components
 ##########################
 
+newcomp rrssi
+newpin rrssi rrssi.out float out
+ready rrssi
+
 newcomp rsigcheck
 newpin rsigcheck rsigcheck.in bit in
 ready rsigcheck
 
+net set-rssi rrssi.out rssi-test.0.in
+
 net sig-to-python sigcheck.0.out2 rsigcheck.in
-#net rssi-to-sig rssi-test.0.out sigcheck.0.in
+net rssi-to-sig rssi-test.0.out sigcheck.0.in
+
+
 
 # functions #1
-#addf rssi-test.0 fpthread
+addf rssi-test.0 fpthread
 addf sigcheck.0 fpthread
 
 addf abspos.0 fpthread

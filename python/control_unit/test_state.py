@@ -1,5 +1,3 @@
-from udpComm.server import *
-from udpComm.client import *
 from hal_control import *
 from general_thread import *
 from statemachine.state import *
@@ -21,9 +19,10 @@ class StateTest(unittest.TestCase):
 
         self.sm = Statemachine(pos_filename)
         self.mock_thread = new_thread(mock_up_func, mock_up_cleanup_func, 10.0, mock_up_callback)
+        self.mock_thread2 = new_thread(mock_up_func, mock_up_cleanup_func, 10.0, mock_up_callback)
 
         self.exit_event = threading.Event()
-        thread.start_new_thread(self.sm.run, (self.mock_thread, self.exit_event))
+        thread.start_new_thread(self.sm.run, (self.mock_thread, self.mock_thread2, self.exit_event))
 
     def tearDown(self):
         self.exit_event.set()
@@ -71,19 +70,27 @@ class StateTest(unittest.TestCase):
         self.assertEqual(v1, 0.0)
         self.assertEqual(v2, 0.0)
 
-    def test_shutdown_threads(self):
-        time.sleep(3)
-        self.mock_thread.stop()
+
+    def test_auto_restart_threads(self):
+        time.sleep(self.sm.check_threads_timeout)
+        self.sm.comm_thread.stop()
         self.sm.pos_thread.stop()
+        self.sm.gps_thread.stop()
 
-        self.mock_thread.join()
-        self.sm.pos_thread.join()
+     #   self.sm.comm_thread.join()
+      #  self.sm.pos_thread.join()
 
-        self.assertFalse(self.sm.pos_thread.is_alive())
-        self.assertFalse(self.mock_thread.is_alive())
+       # self.assertFalse(self.sm.pos_thread.is_alive())
+       # self.assertFalse(self.sm.comm_thread.is_alive())
+
+        time.sleep(self.sm.check_threads_timeout*3)
+
+        self.assertTrue(self.sm.comm_thread.is_alive())
+        self.assertTrue(self.sm.pos_thread.is_alive())
+        self.assertTrue(self.sm.gps_thread.is_alive())
 
 def mock_up_func(cb):
-    pass
+    print "yoyooyoyo"
 
 def mock_up_cleanup_func():
     pass

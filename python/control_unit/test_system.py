@@ -1,14 +1,14 @@
-from udpComm.server import *
-from udpComm.client import *
 from hal_control import *
 from statemachine.state import *
+from udpComm.server import *
+from udpComm.client import *
 import thread
 import unittest
 
 class SystemTest(unittest.TestCase):
 
     def setUp(self):
-        start_hal("../hal/system.hal")
+        start_hal("../../hal/system.hal")
         port = 5530
         ip = "192.168.5.4"
 
@@ -18,58 +18,46 @@ class SystemTest(unittest.TestCase):
         f.write(str)
         f.close()
 
+        comm = Communication(port, ip)
         self.sm = Statemachine(pos_filename)
-        thread.start_new_thread(self.sm.run, (mock_up_callback,))
+
+        comm_thread = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_pos)
+        gps_thread = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
+
+        self.exit_event = threading.Event()
+        thread.start_new_thread(self.sm.run, (comm_thread, gps_thread, self.exit_event))
 
     def tearDown(self):
-        self.sm.pos_thread.stop()
+        self.exit_event.set()
         shutdown_hal()
 
-    def test_rcomps_connection(self):
-        for name, rcomp in self.sm.halrcomps.iteritems():
-            rcomp.wait_connected()
-            self.assertTrue(rcomp.connected)
+    def test_input_output(self):
+        self.sm.halrcomps["rrssi"].getpin("out").set(3.0)
 
-    def test_enter_gps_state(self):
-        self.sm.change_state(True)
-        self.assertEqual(self.sm.state, gps)
+        time.sleep(10)
 
-    def test_reenter_operational_state(self):
-        self.sm.change_state(True)
-        self.assertEqual(self.sm.state, gps)
+        out0 = self.sm.halrcomps["rbldc0"].getpin("in").get()
 
-        self.sm.change_state(False)
-        self.assertEqual(self.sm.state, operational)
+        out1 = self.sm.halrcomps["rbldc1"].getpin("in").get()
 
-    def test_read_init_pos(self):
-        val = 5.4
-        val2 = 10.4
-        self.sm.stop_pos_thread()
+        print out0, out1
 
-        f = open(self.sm.filepath, "w")
-        f.write(("%f\n%f" % (val, val2)))
-        f.close()
+        self.assertNotEqual(out0, 0.0)
+    """
+    def test_low_signal(self):
+        pass
 
-        pos = self.sm.read_init_pos()
+    def test_low_to_high_signal(self):
+        pass
 
-        az = pos[0]
-        el = pos[1]
+    def test_alternation(self):
+        pass
 
-        self.assertEqual(val, az)
-        self.assertEqual(val2, el)
-
-        self.assertEqual(val, az)
-        self.assertEqual(val2, el)
-
-    def test_get_pos(self):
-        v1, v2 = self.sm.get_pos()
-
-        self.assertEqual(v1, 0.0)
-        self.assertEqual(v2, 0.0)
+    def test_gps_output(self):
+        pass
+    """
 
 
-def mock_up_callback(cb):
-    pass
 
 if __name__ == '__main__':
     unittest.main()

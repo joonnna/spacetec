@@ -29,8 +29,8 @@ class Statemachine():
 
         self.pos_thread_timeout = 5.0
         self.reset_pos(az, el)
-        self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
-        self.pos_thread.start()
+        self.start_pos_thread()
+        self.check_threads_timeout = 2.0
 
         self.state = operational
 
@@ -55,11 +55,23 @@ class Statemachine():
         sig = sigcheck.newpin("in", halremote.HAL_BIT, halremote.HAL_IN)
         sig.on_value_changed.append(self.change_state)
 
+        rssi = halremote.RemoteComponent("rrssi", debug=False)
+        rssi.newpin("out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+
+        bldc0 = halremote.RemoteComponent("rbldc0", debug=False)
+        bldc0.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
+
+        bldc1 = halremote.RemoteComponent("rbldc1", debug=False)
+        bldc1.newpin("in", halremote.HAL_FLOAT, halremote.HAL_IN)
+
         self.halrcomps[mux0.name] = mux0
         self.halrcomps[mux1.name] = mux1
         self.halrcomps[abspos0.name] = abspos0
         self.halrcomps[abspos1.name] = abspos1
         self.halrcomps[sigcheck.name] = sigcheck
+        self.halrcomps[rssi.name] = rssi
+        self.halrcomps[bldc0.name] = bldc0
+        self.halrcomps[bldc1.name] = bldc1
 
     def change_state(self, sig):
         if sig:
@@ -146,6 +158,18 @@ class Statemachine():
         mux1 = self.halrcomps["rmux1"]
         mux1.getpin("out").set(el)
 
+    def start_pos_thread(self):
+        self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
+        self.pos_thread.start()
+
+    def start_comm_thread(self):
+        self.comm_thread = new_thread(self.comm_func, self.comm_cleanup, self.comm_thread_timeout, self.send_pos)
+        self.comm_thread.start()
+
+    def start_gps_thread(self):
+        self.gps_thread = new_thread(self.gps_func, self.gps_cleanup, self.gps_thread_timeout)
+        self.gps_thread.start()
+
 
     def _connected(self, connected):
         print('Remote component connected: %s' % str(connected))
@@ -158,19 +182,39 @@ class Statemachine():
         self.sd.stop()
         self.pos_thread.stop()
         self.comm_thread.stop()
+        self.gps_thread.stop()
 
         self.comm_thread.join()
         self.pos_thread.join()
+        self.gps_thread.join()
 
         print "Stopped"
 
-    def run(self, thread, event=None):
-        self.comm_thread = thread
+    def run(self, comm_thread, gps_thread, event=None):
+        self.comm_thread = comm_thread
+        self.comm_func = comm_thread.func
+        self.comm_cleanup = comm_thread.cleanup
+        self.comm_thread_timeout = comm_thread.timeout
         self.comm_thread.start()
+
+        self.gps_thread = gps_thread
+        self.gps_func = gps_thread.func
+        self.gps_cleanup = gps_thread.cleanup
+        self.gps_thread_timeout = gps_thread.timeout
+        self.gps_thread.start()
 
         try:
             while True:
-                time.sleep(0.5)
+                time.sleep(self.check_threads_timeout)
+
+                if not self.pos_thread.is_alive():
+                    self.start_pos_thread()
+
+                if not self.comm_thread.is_alive():
+                    self.start_comm_thread()
+
+                if not self.gps_thread.is_alive():
+                    self.start_gps_thread()
 
                 #If executed as secondary thread instead of main thread
                 if event != None:

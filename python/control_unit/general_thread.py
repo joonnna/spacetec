@@ -5,24 +5,25 @@ class GeneralThread(threading.Thread):
     def __init__(self, func, cleanup_func, timeout, args=None):
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
-        self._func = func
-        self._cleanup = cleanup_func
-        self._timeout = timeout
+        self.func = func
+        self.cleanup = cleanup_func
+        self.timeout = timeout
         self._args = args
+        self.daemon = True
 
     def run(self):
         while True:
             if self._should_stop():
-                self._cleanup()
+                self.cleanup()
                 return
 
             if self._args == None:
-                self._func()
+                self.func()
             else:
-                self._func(self._args)
+                self.func(self._args)
 
-            if self._timeout > 0.0:
-                time.sleep(self._timeout)
+            if self.timeout > 0.0:
+                time.sleep(self.timeout)
 
     def stop(self):
         self._stop_event.set()

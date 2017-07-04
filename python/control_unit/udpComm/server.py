@@ -8,30 +8,30 @@ class Communication():
     def __init__(self, port, ip):
         #print socket.gethostname()
         #print socket.gethostbyname(socket.gethostname())
-        _self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        _self.socket.bind((ip, port))
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.bind((ip, port))
 
-        _self.lock = thread.allocate_lock()
-        _self.loc_lat    = 0.0
-        _self.loc_long   = 0.0
-        _self.loc_height = 0.0
+        self._lock = thread.allocate_lock()
+        self._loc_lat    = 0.0
+        self._loc_long   = 0.0
+        self._loc_height = 0.0
 
-        _self.long_start     = 171
-        _self.long_end       = 180
-        _self.lat_start      = 182
-        _self.lat_end        = 190
-        _self.height_start   = 192
-        _self.height_end     = 198
-
+        self._long_start     = 171
+        self._long_end       = 180
+        self._lat_start      = 182
+        self._lat_end        = 190
+        self._height_start   = 192
+        self._height_end     = 198
+        self.gps_thread_timeout = 10.0
 
         self._session = gps.gps(host="localhost", port="2947")
         self._session.stream(flags=gps.WATCH_JSON)
 
-        self.gps_thread = new_thread(self.get_local_gps_pos, self.gps_cleanup, 10.0)
-        self.gps_thread.start()
+        #self.gps_thread = new_thread(self.get_local_gps_pos, self.gps_cleanup, self.gps_thread_timeout)
+        #self.gps_thread.start()
 
     def _receive_data(self):
-        data, addr = self.socket.recvfrom(500)
+        data, addr = self._socket.recvfrom(500)
 
         longtitude = float(data[self._long_start:self._long_end])
         latitude = float(data[self._lat_start:self._lat_end])
@@ -41,8 +41,6 @@ class Communication():
 
     def shutdown(self):
         self.socket.close()
-        self.gps_thread.stop()
-        self.gps_thread.join()
 
     def _calc_pos(self, data):
         longtitude  = data[0]
@@ -69,11 +67,13 @@ class Communication():
 
         return az_deg, el_deg
 
-    def _gps_cleanup(self):
-        self._session
+    def gps_cleanup(self):
+        pass
+        #self._session
 
-    def _get_local_gps_pos(self):
-        self._session.query("ao")
+
+    def get_local_gps_pos(self):
+        #self._session.query("ao")
 
         self._lock.acquire()
         self._loc_lat    = self._session.fix.latitude
@@ -81,7 +81,7 @@ class Communication():
         self._loc_height = self._session.fix.altitude
 
         if math.isnan(self._loc_height):
-            _self.loc_height = 0.0
+            self._loc_height = 0.0
 
         self._lock.release()
 
@@ -91,13 +91,13 @@ class Communication():
         #thread.start_new_thread(self._gps_test, ())
         #packages = 0
 
-        try:
-            while True:
-                data = self._receive_data()
-                packages += 1
-                pos = self._calc_pos(data)
-                cb(pos)
-        except KeyboardInterrupt:
-            pass
+        #try:
+        #    while True:
+        data = self._receive_data()
+        packages += 1
+        pos = self._calc_pos(data)
+        cb(pos)
+        #except KeyboardInterrupt:
+        #    pass
 
-        self.shutdown()
+        #self.shutdown()
