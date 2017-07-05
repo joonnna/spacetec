@@ -31,7 +31,6 @@ class SigcheckTest(HalBaseTest):
         in1 = self.in1.get()
 
         if in0 > 0.0:
-            print in0, in1
             self.assertEqual(in0, input)
         elif in1 > 0.0:
             self.assertEqual(in1, input)

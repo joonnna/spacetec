@@ -1,57 +1,67 @@
-from hal_control import *
 from statemachine.state import *
 from udpComm.server import *
-from udpComm.client import *
-import thread
-import unittest
+from base_test_class import *
+from general_thread import *
+import time
 
-class SystemTest(unittest.TestCase):
+class SystemTest(BaseTest):
 
-    def setUp(self):
-        start_hal("../../hal/system.hal")
-        port = 5530
-        ip = "192.168.5.4"
+    def init(self):
+        comm = Communication(self.port, self.ip)
 
-        pos_filename = "pos"
-        f = open(pos_filename, "w")
-        str = "%f\n%f" % (5435345.4, 54542.4)
-        f.write(str)
-        f.close()
+        self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_pos)
+        self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
 
-        comm = Communication(port, ip)
-        self.sm = Statemachine(pos_filename)
+        self.client = True
 
-        comm_thread = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_pos)
-        gps_thread = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
-
-        self.exit_event = threading.Event()
-        thread.start_new_thread(self.sm.run, (comm_thread, gps_thread, self.exit_event))
-
-    def tearDown(self):
-        self.exit_event.set()
-        shutdown_hal()
 
     def test_input_output(self):
+        out0 = self.sm.halrcomps["rbldc0"].getpin("in")
+        out0.on_value_changed.append(self.wait_callback)
+
+        out1 = self.sm.halrcomps["rbldc1"].getpin("in")
+        out1.on_value_changed.append(self.wait_callback)
+
         self.sm.halrcomps["rrssi"].getpin("out").set(3.0)
 
-        time.sleep(10)
+        self.wait()
 
-        out0 = self.sm.halrcomps["rbldc0"].getpin("in").get()
+        val0 = out0.get()
+        val1 = out1.get()
+        print val0, val1
 
-        out1 = self.sm.halrcomps["rbldc1"].getpin("in").get()
+        if val0 != 0.0:
+            self.assertNotEqual(val0, 0.0)
+        elif val1 != 0.0:
+            self.assertNotEqual(val1, 0.0)
+        else:
+            self.assertNotEqual(val0, 0.0)
 
-        print out0, out1
-
-        self.assertNotEqual(out0, 0.0)
-    """
     def test_low_signal(self):
-        pass
+        self.sm.halrcomps["rrssi"].getpin("out").set(1.0)
 
-    def test_low_to_high_signal(self):
-        pass
+        state = self.sm.halrcomps["rsigcheck"].getpin("in")
+        state.on_value_changed.append(self.wait_callback)
 
+        self.wait()
+
+        self.assertEqual(self.sm.state, gps)
+
+    def test_high_signal(self):
+        self.sm.halrcomps["rrssi"].getpin("out").set(10.0)
+
+        #Ensure that the value is proagated through the system
+        time.sleep(self.update_timeout*2)
+
+        state = self.sm.halrcomps["rsigcheck"].getpin("in")
+        state.on_value_changed.append(self.wait_callback)
+
+        self.wait()
+
+        self.assertEqual(self.sm.state, operational)
+
+    """
     def test_alternation(self):
-        pass
 
     def test_gps_output(self):
         pass

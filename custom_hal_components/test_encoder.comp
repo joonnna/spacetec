@@ -1,0 +1,8 @@
+component test_encoder "Test encoder";
+pin out float out0;
+pin out float out1;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+out0 = 2.0;
+out1 = 3.0;

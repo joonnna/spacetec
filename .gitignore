@@ -3,3 +3,4 @@ statemachine/state.pyc
 statemachine/ptudata
 statemachine/core
 hal_tests/core
+hal/core

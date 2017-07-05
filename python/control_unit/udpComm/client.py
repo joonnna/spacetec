@@ -10,19 +10,20 @@ class Udpclient():
     def send_msg(self, msg):
         self.socket.sendto(msg, (self.ip, self.port))
 
-    def run(self, input_data):
-
-        if not input_data:
+    def run(self, input_data=None):
+        if input_data == None:
             f = open("ptudata", "r")
             data = f.read()
+            f.close()
             lines = data.split("\n")
         else:
             lines = input_data.split("\n")
 
-        print "Starting sending"
-        for line in lines:
-            if len(line) <= 1:
-                continue
-            self.send_msg(line)
-            time.sleep(0.1)
-        print "Done sending"
+        while True:
+            print "Starting sending"
+            for line in lines:
+                if len(line) <= 1:
+                    continue
+                self.send_msg(line)
+                time.sleep(0.1)
+            print "Done sending"

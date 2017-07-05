@@ -61,6 +61,8 @@ class AbsposTest(HalBaseTest):
     def reset_old_val(self, reset, input):
         self.single_input(input)
         self.wait()
+        self.clear()
+
         self.assertTrue(self.in1.synced)
         self.assertEqual(self.in1.get(), input)
 

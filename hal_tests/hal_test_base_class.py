@@ -3,29 +3,26 @@ from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
 from hal_control import *
 import time
+import threading
 
 class HalBaseTest(unittest.TestCase):
 
     def wait_callback(self, val):
-        self.updated = True
+        self.event.set()
+
+    def wait(self):
+        self.event.wait(self.timeWait)
+
+    def clear(self):
+        self.event.clear()
 
     def init(self):
         pass
 
-    def wait(self):
-        start = time.time()
-
-        while True:
-            if self.updated:
-                self.updated = False
-                return
-
-            if time.time() - start > self.timeWait:
-                return
-
     def setUp(self):
-        self.updated = False
-        self.timeWait = 2
+        self.event = threading.Event()
+        self.timeWait = 3.0
+
         self.rcomps = []
         self.sd = ServiceDiscovery()
 

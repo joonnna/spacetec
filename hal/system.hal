@@ -2,11 +2,18 @@ newthread fpthread fp 10000000
 loadrt muxn count=2
 loadrt limit1 count=2
 loadrt pid count=2
-loadrt bldc cfg=q,q #Probably wrong config
+loadrt bldc cfg=nT,nT #Probably wrong config
 loadrt abspos count=2
 loadrt steptrack count=2
 loadrt sigcheck
+
+# Test input components
 loadrt rssi_test
+loadrt test_encoder
+
+
+setp pid.0.enable true
+setp pid.1.enable true
 
 # Test values
 #setp muxn.0.in0 5.4
@@ -23,11 +30,14 @@ net mux-to-lim.0 muxn.0.out limit1.0.in
 
 net lim-to-pid.0 limit1.0.out pid.0.command
 
-net abs-to-pid-step.0 abspos.0.out0 pid.0.feedback steptrack.0.in0
+net abs-to-pid-step.0 abspos.0.out0 pid.0.feedback steptrack.0.in1
 
 net pid-to-bldc.0 pid.0.output bldc.0.value
 
 net step-to-mux.0 steptrack.0.out muxn.0.in0
+
+net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
+
 
 # parameter values
 setp limit1.0.max 1
@@ -66,12 +76,13 @@ net reset.0 rabspos0.out abspos.0.in1
 # Net's for 2th set
 net lim-to-pid.1 limit1.1.out pid.1.command
 
-
 net pid-to-bldc.1 pid.1.output bldc.1.value
 
-net abs-to-pid-step.1 abspos.1.out1 pid.1.feedback steptrack.1.in0
+net abs-to-pid-step.1 abspos.1.out1 pid.1.feedback steptrack.1.in1
 
 net step-to-mux.1 steptrack.1.out muxn.1.in0
+
+net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
 
 # parameter values
 setp limit1.1.max 1
@@ -121,9 +132,12 @@ net set-rssi rrssi.out rssi-test.0.in
 net sig-to-python sigcheck.0.out2 rsigcheck.in
 net rssi-to-sig rssi-test.0.out sigcheck.0.in
 
+net enc-to-abs.0 test-encoder.0.out0 abspos.0.in0
+net enc-to-abs.1 test-encoder.0.out1 abspos.1.in0
 
 
 # functions #1
+addf test-encoder.0 fpthread
 addf rssi-test.0 fpthread
 addf sigcheck.0 fpthread
 

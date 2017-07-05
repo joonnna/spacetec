@@ -1,6 +1,6 @@
 component abspos "Increment absolute position";
 pin in float in0;
-pin in float in1;
+pin in float in1; //Reset pin
 pin out float out0;
 pin out float out1;
 pin out float out2; //Testpin for reseting old pos

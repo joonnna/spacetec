@@ -1,6 +1,7 @@
 import time
 import sys
 from general_thread import *
+from hal_control import *
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
 
@@ -31,8 +32,6 @@ class Statemachine():
         self.reset_pos(az, el)
         self.start_pos_thread()
         self.check_threads_timeout = 2.0
-
-        self.state = operational
 
     def initrcomps(self):
         mux0 = halremote.RemoteComponent("rmux0", debug=False)
@@ -74,6 +73,7 @@ class Statemachine():
         self.halrcomps[bldc1.name] = bldc1
 
     def change_state(self, sig):
+        print sig
         if sig:
             self.halrcomps["rmux0"].getpin("out1").set(1)
             self.halrcomps["rmux1"].getpin("out1").set(1)
@@ -103,7 +103,7 @@ class Statemachine():
         except IOError:
             print "Initial pos file not found! Exiting"
             sys.exit(1)
-
+        print repr(pos[0]), repr(pos[1])
         return float(pos[0]), float(pos[1])
 
     def reset_pos(self, pos0, pos1):
@@ -153,10 +153,10 @@ class Statemachine():
         el = self.init_el + pos[1]
 
         mux0 = self.halrcomps["rmux0"]
-        mux0.getpin("out").set(az)
+        mux0.getpin("out1").set(az)
 
         mux1 = self.halrcomps["rmux1"]
-        mux1.getpin("out").set(el)
+        mux1.getpin("out1").set(el)
 
     def start_pos_thread(self):
         self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
@@ -180,6 +180,13 @@ class Statemachine():
 
     def cleanup(self):
         self.sd.stop()
+
+        for name, rcomp in self.halrcomps.iteritems():
+            rcomp.remove_pins()
+            rcomp.set_disconnected()
+
+        shutdown_hal()
+
         self.pos_thread.stop()
         self.comm_thread.stop()
         self.gps_thread.stop()
@@ -188,9 +195,16 @@ class Statemachine():
         self.pos_thread.join()
         self.gps_thread.join()
 
+        if self.cleanup_event != None:
+            self.cleanup_event.set()
+        else:
+            print "KA I FAEN"
+
         print "Stopped"
 
-    def run(self, comm_thread, gps_thread, event=None):
+    def run(self, comm_thread, gps_thread, exit_event=None, cleanup_event=None):
+        self.cleanup_event = cleanup_event
+
         self.comm_thread = comm_thread
         self.comm_func = comm_thread.func
         self.comm_cleanup = comm_thread.cleanup
@@ -217,8 +231,8 @@ class Statemachine():
                     self.start_gps_thread()
 
                 #If executed as secondary thread instead of main thread
-                if event != None:
-                    if event.isSet():
+                if exit_event != None:
+                    if exit_event.isSet():
                         break
         except KeyboardInterrupt:
             pass

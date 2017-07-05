@@ -27,8 +27,6 @@ class Communication():
         self._session = gps.gps(host="localhost", port="2947")
         self._session.stream(flags=gps.WATCH_JSON)
 
-        #self.gps_thread = new_thread(self.get_local_gps_pos, self.gps_cleanup, self.gps_thread_timeout)
-        #self.gps_thread.start()
 
     def _receive_data(self):
         data, addr = self._socket.recvfrom(500)
@@ -40,7 +38,8 @@ class Communication():
         return (longtitude, latitude, height)
 
     def shutdown(self):
-        self.socket.close()
+ #       self._socket.shutdown(socket.SHUT_RDWR)
+        self._socket.close()
 
     def _calc_pos(self, data):
         longtitude  = data[0]
@@ -94,7 +93,6 @@ class Communication():
         #try:
         #    while True:
         data = self._receive_data()
-        packages += 1
         pos = self._calc_pos(data)
         cb(pos)
         #except KeyboardInterrupt:

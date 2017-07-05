@@ -25,7 +25,6 @@ class SteptrackTest(HalBaseTest):
 
         new_pos = self.step(sig_strength, prev_pos)
 
-        print prev_pos, new_pos
         #Direction is initially false(steps in "negative direction")
         self.assertLess(new_pos, prev_pos)
 
@@ -119,6 +118,9 @@ class SteptrackTest(HalBaseTest):
 
         self.wait()
         self.assertTrue(self.input.synced)
+
+        self.clear()
+
         return self.input.get()
 
 if __name__ == '__main__':
