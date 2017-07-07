@@ -142,7 +142,8 @@ class Statemachine():
             return
 
         #If file was altered somehow after initiating cleanup (not likely)
-        if len(pos) < 2:
+        data = pos.split("\n")
+        if len(data) < 2:
             fw = open(self.filepath, "w")
             old_pos = self.get_pos()
             fw.write(("%f\n%f" % (old_pos[0], old_pos[1])))

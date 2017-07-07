@@ -34,7 +34,7 @@ class BaseTest(unittest.TestCase):
 
         pos_filename = "pos"
         f = open(pos_filename, "w")
-        str = "%f\n%f" % (5435345.4, 54542.4)
+        str = "%f\n%f" %(135.04, 92.18)
         f.write(str)
         f.close()
 

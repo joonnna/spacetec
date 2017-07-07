@@ -41,14 +41,6 @@ class StateTest(BaseTest):
         self.assertEqual(val, az)
         self.assertEqual(val2, el)
 
-    """
-    #TODO Random if values are set or not, fix this
-    def test_get_pos(self):
-        v1, v2 = self.sm.get_pos()
-
-        self.assertEqual(v1, 0.0)
-        self.assertEqual(v2, 0.0)
-    """
     def test_auto_restart_threads(self):
         time.sleep(self.sm.check_threads_timeout)
         self.sm.comm_thread.stop()
@@ -60,6 +52,12 @@ class StateTest(BaseTest):
         self.assertTrue(self.sm.comm_thread.is_alive())
         self.assertTrue(self.sm.pos_thread.is_alive())
         self.assertTrue(self.sm.gps_thread.is_alive())
+
+    def test_abspos_cleanup(self):
+        pass
+
+
+
 
 def mock_up_func():
     pass
