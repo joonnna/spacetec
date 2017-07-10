@@ -3,7 +3,7 @@ import ConfigParser
 
 def read_config():
     config = ConfigParser.ConfigParser()
-    config.read("../../../configs/test_config.ini")
+    config.read("../../configs/test_config.ini")
 
     dict = {}
 
@@ -27,6 +27,13 @@ def read_config():
 
     dict["az_range"] = config.getfloat("AXIS_RANGE", "AZ_RANGE")
     dict["el_range"] = config.getfloat("AXIS_RANGE", "EL_RANGE")
+
+    dict["az_offset"] = config.getfloat("COMPASS_OFFSET", "AZ_OFFSET")
+    dict["el_offset"] = config.getfloat("COMPASS_OFFSET", "EL_OFFSET")
+
+    dict["gps_long"] = config.getfloat("GPS_CORDINATES", "LONGTITUDE")
+    dict["gps_lat"] = config.getfloat("GPS_CORDINATES", "LATITUDE")
+    dict["gps_height"] = config.getfloat("GPS_CORDINATES", "HEIGHT")
 
 
     return dict

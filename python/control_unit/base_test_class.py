@@ -46,7 +46,7 @@ class BaseTest(unittest.TestCase):
 
         self.init()
 
-        thread.start_new_thread(self.sm.run, (self.thread1, self.thread2, self.exit_event, self.cleanup_event))
+        thread.start_new_thread(self.sm.run, (self.thread1, self.exit_event, self.cleanup_event))
 
         if self.client:
             test_client = Udpclient(self.port, self.ip)

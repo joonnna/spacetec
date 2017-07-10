@@ -1,5 +1,6 @@
 from general_thread import *
 from statemachine.state import *
+from statemachine.state_enum import *
 from base_test_class import *
 
 class StateTest(BaseTest):
@@ -12,14 +13,14 @@ class StateTest(BaseTest):
 
     def test_enter_gps_state(self):
         self.sm.change_state(True)
-        self.assertEqual(self.sm.state, gps)
+        self.assertEqual(self.sm.state, State.gps)
 
     def test_reenter_operational_state(self):
         self.sm.change_state(True)
-        self.assertEqual(self.sm.state, gps)
+        self.assertEqual(self.sm.state, State.gps)
 
         self.sm.change_state(False)
-        self.assertEqual(self.sm.state, operational)
+        self.assertEqual(self.sm.state, State.tracking)
 
     def test_read_init_pos(self):
         val = 5.4
@@ -45,17 +46,17 @@ class StateTest(BaseTest):
         time.sleep(self.sm.check_threads_timeout)
         self.sm.comm_thread.stop()
         self.sm.pos_thread.stop()
-        self.sm.gps_thread.stop()
+     #   self.sm.gps_thread.stop()
 
         time.sleep(self.sm.check_threads_timeout*3)
 
         self.assertTrue(self.sm.comm_thread.is_alive())
         self.assertTrue(self.sm.pos_thread.is_alive())
-        self.assertTrue(self.sm.gps_thread.is_alive())
-
+    #    self.assertTrue(self.sm.gps_thread.is_alive())
+    """
     def test_abspos_cleanup(self):
         pass
-
+    """
 
 
 

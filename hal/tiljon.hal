@@ -1,0 +1,50 @@
+## Components
+
+loadrt hostmot2
+
+newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo"
+
+# load threads
+
+# load modules
+
+
+## Nets
+
+# add:
+# bldc to pwmgen
+net bldc.0.A-to-pwmgen bldc.0.A-value => hm2_de0n.0.3pwmgen.00.A-value
+net bldc.0.B-to-pwmgen bldc.0.B-value => hm2_de0n.0.3pwmgen.00.B-value
+net bldc.0.C-to-pwmgen bldc.0.C-value => hm2_de0n.0.3pwmgen.00.C-value
+net bldc.1.A-to-pwmgen bldc.1.A-value => hm2_de0n.0.3pwmgen.01.A-value
+net bldc.1.B-to-pwmgen bldc.1.B-value => hm2_de0n.0.3pwmgen.01.B-value
+net bldc.1.C-to-pwmgen bldc.1.C-value => hm2_de0n.0.3pwmgen.01.C-value
+
+# encoder position to scale
+net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.0.in
+net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.1.in
+
+# encoder count to bldc
+net encoder.0.count-to-bldc hm2_de0n.0.encoder.00.count => bldc.0.value
+net encoder.1.count-to-bldc hm2_de0n.0.encoder.01.count => bldc.1.value
+
+# encoder velocity to velocity pid
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => pid.2.feedback
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => pid.3.feedback
+
+# SPI
+
+
+## Parameter values
+
+# add:
+# enable pwmgen
+setp hm2_de0n.0.3pwmgen.00.enable TRUE
+setp hm2_de0n.0.3pwmgen.01.enable TRUE
+
+## Realtime thread/function links
+
+addf hm2_de0n.0.read thread
+addf hm2_de0n.0.read_gpio thread
+addf hm2_de0n.0.write thread
+addf hm2_de0n.0.write_gpio thread
