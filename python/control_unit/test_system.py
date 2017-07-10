@@ -57,16 +57,17 @@ class SystemTest(BaseTest):
         self.assertNotEqual(val1, 0.0)
 
 
-    """
     def test_alternation(self):
-    """
+        pass
 
     def test_reset_pos(self):
         pass
 
     def test_increasing_signal(self):
+        pass
 
     def test_decreasing_signal(self):
+        pass
 
     def test_gps_output(self):
         low_sig = 1.0
@@ -91,6 +92,11 @@ class SystemTest(BaseTest):
         else:
             self.assertNotEqual(val0, 0.0)
 
+    def test_calibration(self):
+        pass
+
+    def test_gps_checker(self):
+        pass
 
     def set_rssi_and_wait(self, val):
         self.sm.halrcomps["rrssi"].getpin("out").set(val)

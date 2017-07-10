@@ -26,9 +26,11 @@ class CommTest(unittest.TestCase):
 
         pos = extract_pos(data)
 
+        print pos
+
         self.thread = thread.start_new_thread(self.client.run, (data,))
 
-        received_pos = self.comm.receive_data()
+        received_pos = self.comm._receive_data()
 
         for idx, var in enumerate(pos):
             self.assertEqual(var, received_pos[idx])
@@ -39,7 +41,7 @@ class CommTest(unittest.TestCase):
         pass
 
     def test_gps_input(self):
-        pass
+        self.comm.get_local_gps_pos()
 
 
 def extract_pos(data):

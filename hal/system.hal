@@ -1,7 +1,7 @@
 newthread fpthread fp 10000000
-loadrt muxn count=2
-loadrt limit1 count=2
-loadrt pid count=2
+loadrt muxn count=2 pincount=3
+loadrt limit1 names=vlim.0 vlim.1 plim.0 plim.1
+loadrt pid names=vpid.0 vpid.1 ppid.0 ppid.1
 loadrt bldc cfg=nT,nT #Probably wrong config
 loadrt abspos count=2
 loadrt steptrack count=2
@@ -11,9 +11,18 @@ loadrt sigcheck
 loadrt rssi_test
 loadrt test_encoder
 
+#Early definitons to link signal
+newcomp rstep
+newpin rstep rstep.az float in
+newpin rstep rstep.el float in
+ready rstep
 
-setp pid.0.enable true
-setp pid.1.enable true
+setp ppid.0.enable true
+setp ppid.1.enable true
+
+setp vpid.0.enable true
+setp vpid.1.enable true
+
 
 # Test values
 #setp muxn.0.in0 5.4
@@ -26,29 +35,45 @@ setp pid.1.enable true
 ######################################
 
 # Net's for 1st set
-net mux-to-lim.0 muxn.0.out limit1.0.in
+net mux-to-plim.0 muxn.0.out plim.0.in
 
-net lim-to-pid.0 limit1.0.out pid.0.command
+net plim-to-ppid.0 plim.0.out ppid.0.command
 
-net abs-to-pid-step.0 abspos.0.out0 pid.0.feedback steptrack.0.in1
+net abs-to-ppid-step.0 abspos.0.out0 ppid.0.feedback steptrack.0.in1
 
-net pid-to-bldc.0 pid.0.output bldc.0.value
+net ppid-to-vlim ppid.0.output vlim.0.in
 
-net step-to-mux.0 steptrack.0.out muxn.0.in0
+net vlim-to-vpid vlim.0.out vpid.0.command
+
+net vpid-to-bldc.0 vpid.0.output bldc.0.value
+
+#Need motor feedback (velocity/pos)
+#net enc-to-vpid enc.. vpid.0.feedback
+#net enc-to-abspos enc.. abspos.0.in0
+
+net step-to-mux-rstep.0 steptrack.0.out muxn.0.in1 rstep.az
 
 net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
 
-
 # parameter values
-setp limit1.0.max 1
-setp limit1.0.min 0
-setp pid.0.Pgain 1
-setp pid.0.Igain 1
+setp vlim.0.max 1.0
+setp vlim.0.min 0.0
+
+setp plim.0.max 180.0
+setp plim.0.min -180.0
+
+setp vpid.0.Pgain 1
+setp vpid.0.Igain 1
+
+setp ppid.0.Pgain 1
+setp ppid.0.Igain 1
+
 
 # Remote components
 newcomp rmux0
 newpin rmux0 rmux0.out0 s32 out
 newpin rmux0 rmux0.out1 float out
+newpin rmux0 rmux0.out2 float out
 ready rmux0
 
 newcomp rabspos0
@@ -60,35 +85,84 @@ newcomp rbldc0
 newpin rbldc0 rbldc0.in float in
 ready rbldc0
 
+newcomp rvlim0
+newpin rvlim0 rvlim0.max float out
+newpin rvlim0 rvlim0.min float out
+ready rlim0
+
+newcomp rplim0
+newpin rplim0 rplim0.max float out
+newpin rplim0 rplim0.min float out
+ready rplim0
+
+newcomp rvpid0
+newpin rvpid0 rvpid0.pgain float out
+newpin rvpid0 rvpid0.igain float out
+ready rvpid0
+
+newcomp rppid0
+newpin rppid0 rppid0.pgain float out
+newpin rppid0 rppid0.igain float out
+ready rppid0
+
+net pos-max0 rplim0.max plim.0.max
+net pos-min0 rplim0.min plim.0.min
+
+net vel-max0 rvlim0.max vlim.0.max
+net vel-min0 rvlim0.min vlim.0.min
+
+net pos-pgain0 rppid0.pgain ppid.0.pgain
+net pos-igain0 rppid0.igain ppid.0.pgain
+
+net vel-pgain0 rppid0.pgain vpid.0.pgain
+net vel-igain0 rppid0.igain vpid.0.pgain
+
 net bldc-out0 bldc.0.out rbldc0.in
 
 net sel.0 rmux0.out0 muxn.0.sel
-net az rmux0.out1 muxn.0.in1
+net gps_az rmux0.out1 muxn.0.in2
+net cal_az rmux.out2 muxn.0.in0
 
 net oldpos.0 abspos.0.out1 rabspos0.in
 net reset.0 rabspos0.out abspos.0.in1
-
 
 ######################################
 #2th set of components and connections
 ######################################
 
-# Net's for 2th set
-net lim-to-pid.1 limit1.1.out pid.1.command
+net mux-to-plim.1 muxn.1.out plim.1.in
 
-net pid-to-bldc.1 pid.1.output bldc.1.value
+net plim-to-ppid.1 plim.1.out ppid.1.command
 
-net abs-to-pid-step.1 abspos.1.out1 pid.1.feedback steptrack.1.in1
+net abs-to-ppid-step.1 abspos.1.out0 ppid.1.feedback steptrack.1.in1
 
-net step-to-mux.1 steptrack.1.out muxn.1.in0
+net ppid-to-vlim ppid.1.output vlim.1.in
 
-net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
+net vlim-to-vpid vlim.1.out vpid.1.command
+
+net vpid-to-bldc.1 vpid.1.output bldc.1.value
+
+#Need motor feedback (velocity/pos)
+#net enc-to-vpid enc.. vpid.1.feedback
+#net enc-to-abspos enc.. abspos.1.in0
+
+net step-to-mux-rstep.1 steptrack.1.out muxn.1.in1 rstep.el
+
+net sigcheck-to-step.1 sigcheck.0.out0 steptrack.1.in0
 
 # parameter values
-setp limit1.1.max 1
-setp limit1.1.min 0
-setp pid.1.Pgain 1
-setp pid.1.Igain 1
+setp vlim.1.max 1.0
+setp vlim.1.min 0.0
+
+setp plim.1.max 180.0
+setp plim.1.min -180.0
+
+setp vpid.1.Pgain 1
+setp vpid.1.Igain 1
+
+setp ppid.1.Pgain 1
+setp ppid.1.Igain 1
+
 
 # Remote components
 newcomp rmux1
@@ -101,15 +175,48 @@ newpin rabspos1 rabspos1.in float in
 newpin rabspos1 rabspos1.out float out
 ready rabspos1
 
-
 newcomp rbldc1
 newpin rbldc1 rbldc1.in float in
 ready rbldc1
 
+newcomp rvlim1
+newpin rvlim1 rvlim1.max float out
+newpin rvlim1 rvlim1.min float out
+ready rlim0
+
+newcomp rplim1
+newpin rplim1 rplim1.max float out
+newpin rplim1 rplim1.min float out
+ready rplim1
+
+newcomp rvpid1
+newpin rvpid1 rvpid1.pgain float out
+newpin rvpid1 rvpid1.igain float out
+ready rvpid1
+
+newcomp rppid1
+newpin rppid1 rppid1.pgain float out
+newpin rppid1 rppid1.igain float out
+ready rppid1
+
+net pos-max1 rplim1.max plim.1.max
+net pos-min1 rplim1.min plim.1.min
+
+net vel-max1 rvlim1.max vlim.1.max
+net vel-min1 rvlim1.min vlim.1.min
+
+net pos-pgain1 rppid1.pgain ppid.1.pgain
+net pos-igain1 rppid1.igain ppid.1.pgain
+
+net vel-pgain1 rppid1.pgain vpid.1.pgain
+net vel-igain1 rppid1.igain vpid.1.pgain
+
 net bldc-out1 bldc.1.out rbldc1.in
 
 net sel.1 rmux1.out0 muxn.1.sel
-net el rmux1.out1 muxn.1.in1
+net gps_el rmux1.out1 muxn.1.in2
+net cal_el rmux1.out2 muxn.1.in0
+
 
 net oldpos.1 abspos.1.out2 rabspos1.in
 net reset.1 rabspos1.out abspos.1.in1

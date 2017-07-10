@@ -9,7 +9,7 @@ def start(path, ip, port):
     sm = Statemachine(path)
     comm = Communication(port, ip)
     comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_pos)
-    gps_thread = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0, sm.send_pos)
+    gps_thread = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0, sm.send_gps_pos)
 
     sm.run(comm_thread, gps_thread)
 

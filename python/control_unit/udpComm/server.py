@@ -22,10 +22,11 @@ class Communication():
         self._lat_end        = 190
         self._height_start   = 192
         self._height_end     = 198
-        self.gps_thread_timeout = 10.0
 
         self._session = gps.gps(host="localhost", port="2947")
         self._session.stream(flags=gps.WATCH_JSON)
+
+#        print self._session.fix.__dict__
 
 
     def _receive_data(self):
@@ -64,7 +65,7 @@ class Communication():
         az_rad = math.atan((y/x))
         az_deg = math.degrees(az_rad)
 
-        return az_deg, el_deg
+        return az_deg, el_deg, height
 
     def gps_cleanup(self):
         pass
@@ -81,6 +82,11 @@ class Communication():
 
         if math.isnan(self._loc_height):
             self._loc_height = 0.0
+
+
+#        print self._loc_lat
+ #       print self._loc_long
+  #      print self._loc_height
 
         self._lock.release()
 
