@@ -7,7 +7,7 @@ pin out bit dir; //testpin for direction
 param rw float prev;
 param rw float prev_out;
 param rw bit direction;
-param rw float step_length = 1.0;
+param rw float step_length;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;

@@ -30,7 +30,7 @@ class Communication():
 
 
     def _receive_data(self):
-        data, addr = self._socket.recvfrom(500)
+        data, addr = self._socket.recvfrom(1024)
 
         longtitude = float(data[self._long_start:self._long_end])
         latitude = float(data[self._lat_start:self._lat_end])
@@ -43,14 +43,18 @@ class Communication():
         self._socket.close()
 
     def _calc_pos(self, data):
-        longtitude  = data[0]
-        latitude    = data[1]
-        height      = data[2]
+        #longtitude  = data[0]
+        #latitude    = data[1]
+        #height      = data[2]
+
+        longtitude = 16.05
+        latitude   = 69.29
+        height     = 1.0
 
         self._lock.acquire()
-        loc_long = self._loc_long
-        loc_lat = self._loc_lat
-        loc_height = self._loc_height
+        loc_long = 16.03
+        loc_lat = 69.30
+        loc_height = 0.0
         self._lock.release()
 
         x = longtitude - loc_long
@@ -63,7 +67,9 @@ class Communication():
         el_deg = math.degrees(el_rad)
 
         az_rad = math.atan((y/x))
-        az_deg = math.degrees(az_rad)
+
+        #TODO sketchy -180.0
+        az_deg = 180.0 - math.degrees(az_rad)
 
         return az_deg, el_deg, height
 

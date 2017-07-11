@@ -28,17 +28,17 @@ class BaseTest(unittest.TestCase):
         self.update_event = threading.Event()
         self.update_timeout = 5.0
 
-        start_hal("../../hal/system.hal")
+        start_hal("/home/machinekit/machinekit/spacetec/hal/test_system.hal")
         self.port = 5530
         self.ip = "192.168.5.4"
 
-        pos_filename = "pos"
+        pos_filename = "/home/machinekit/machinekit/spacetec/data_files/pos"
         f = open(pos_filename, "w")
-        str = "%f\n%f" %(135.04, 92.18)
+        str = "%f\n%f" % (135.04, 92.18)
         f.write(str)
         f.close()
 
-        self.sm = Statemachine(pos_filename)
+        self.sm = Statemachine(pos_filename, True)
 
         for name, rcomp in self.sm.halrcomps.iteritems():
             rcomp.wait_connected()
@@ -55,3 +55,4 @@ class BaseTest(unittest.TestCase):
     def tearDown(self):
         self.exit_event.set()
         self.cleanup_event.wait(self.cleanup_timeout)
+        self.sm = None

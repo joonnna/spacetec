@@ -3,7 +3,7 @@ import ConfigParser
 
 def read_config():
     config = ConfigParser.ConfigParser()
-    config.read("../../configs/test_config.ini")
+    config.read("/home/machinekit/machinekit/spacetec/configs/test_config.ini")
 
     dict = {}
 
@@ -34,6 +34,9 @@ def read_config():
     dict["gps_long"] = config.getfloat("GPS_CORDINATES", "LONGTITUDE")
     dict["gps_lat"] = config.getfloat("GPS_CORDINATES", "LATITUDE")
     dict["gps_height"] = config.getfloat("GPS_CORDINATES", "HEIGHT")
+
+    dict["overide_gps_el"] = config.getfloat("OVERIDE_GPS_LIMS", "EL_LIM")
+    dict["overide_gps_height"] = config.getfloat("OVERIDE_GPS_LIMS", "HEIGHT_LIM")
 
 
     return dict

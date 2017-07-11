@@ -1,0 +1,24 @@
+newthread fpthread fp 10000000
+loadrt near
+
+newcomp outcomp
+newpin outcomp outcomp.out0 float out
+newpin outcomp outcomp.out1 float out
+newpin outcomp outcomp.diff float io
+ready outcomp
+
+newcomp incomp
+newpin incomp incomp.in bit in
+ready incomp
+
+net in1 outcomp.out0 near.0.in1
+net in2 outcomp.out1 near.0.in2
+net diff outcomp.diff near.0.difference
+
+net out near.0.out incomp.in
+
+addf near.0 fpthread
+
+start
+
+loadusr haltalk

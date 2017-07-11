@@ -2,72 +2,57 @@ from general_thread import *
 from statemachine.state import *
 from statemachine.state_enum import *
 from base_test_class import *
+from udpComm.server import *
+from udpComm.client import *
 
 class StateTest(BaseTest):
 
     def init(self):
-        self.thread1 = new_thread(mock_up_func, mock_up_cleanup_func, 10.0)
-        self.thread2 = new_thread(mock_up_func, mock_up_cleanup_func, 10.0)
+        comm = Communication(self.port, self.ip)
+
+        self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
+        self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
 
         self.client = False
 
-    def test_enter_gps_state(self):
-        self.sm.change_state(True)
-        self.assertEqual(self.sm.state, State.gps)
+    def test_stay_idle_with_no_client(self):
+        self.sm.set_state(State.gps)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-    def test_reenter_operational_state(self):
-        self.sm.change_state(True)
-        self.assertEqual(self.sm.state, State.gps)
+        self.sm.set_state(State.gps_overide)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-        self.sm.change_state(False)
-        self.assertEqual(self.sm.state, State.tracking)
+        self.sm.set_state(State.stop_overide)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-    def test_read_init_pos(self):
-        val = 5.4
-        val2 = 10.4
-        self.sm.pos_thread.stop()
+        self.sm.set_state(State.tracking)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-        f = open(self.sm.filepath, "w")
-        f.write(("%f\n%f" % (val, val2)))
-        f.close()
+        self.sm.set_state(State.calibrating)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-        pos = self.sm.read_init_pos()
+        self.sm.set_state(State.idle)
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-        az = pos[0]
-        el = pos[1]
+    def test_exit_idle_state_on_udp_recieve(self):
+        self.assertEqual(self.sm.get_state(), State.idle)
 
-        self.assertEqual(val, az)
-        self.assertEqual(val2, el)
+        self.start_client()
 
-        self.assertEqual(val, az)
-        self.assertEqual(val2, el)
+        time.sleep(self.update_timeout)
 
-    def test_auto_restart_threads(self):
-        time.sleep(self.sm.check_threads_timeout)
-        self.sm.comm_thread.stop()
-        self.sm.pos_thread.stop()
-     #   self.sm.gps_thread.stop()
+        self.assertNotEqual(self.sm.get_state(), State.idle)
 
-        time.sleep(self.sm.check_threads_timeout*3)
+    def test_gps_overide(self):
+        self.start_client()
 
-        self.assertTrue(self.sm.comm_thread.is_alive())
-        self.assertTrue(self.sm.pos_thread.is_alive())
-    #    self.assertTrue(self.sm.gps_thread.is_alive())
-    """
-    def test_abspos_cleanup(self):
-        pass
-    """
+        time.sleep(self.update_timeout)
 
 
+    def start_client(self):
+        test_client = Udpclient(self.port, self.ip)
+        thread.start_new_thread(test_client.run, ())
 
-def mock_up_func():
-    pass
-
-def mock_up_cleanup_func():
-    pass
-
-def mock_up_callback():
-    pass
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,3 +8,4 @@ class State(Enum):
     gps = 3
     gps_overide = 4
     stop_overide = 5
+    stop_idle = 6

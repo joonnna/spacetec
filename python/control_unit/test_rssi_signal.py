@@ -4,7 +4,7 @@ from base_test_class import *
 from general_thread import *
 import time
 
-class SystemTest(BaseTest):
+class RssiTest(BaseTest):
 
     def init(self):
         comm = Communication(self.port, self.ip)
@@ -14,9 +14,8 @@ class SystemTest(BaseTest):
 
         self.client = True
 
-    def test_gps_output(self):
-        low_sig = 1.0
-        self.set_rssi_and_wait(low_sig)
+    def test_input_output(self):
+        self.sm.halrcomps["rrssi"].getpin("out").set(3.0)
 
         out0 = self.sm.halrcomps["rbldc0"].getpin("in")
         out0.on_value_changed.append(self.wait_callback)
@@ -36,41 +35,34 @@ class SystemTest(BaseTest):
             self.assertNotEqual(val1, 0.0)
         else:
             self.assertNotEqual(val0, 0.0)
+    def test_low_signal_state(self):
+        low_sig = 1.0
+        self.set_rssi_and_wait(low_sig)
 
-    def test_alternation(self):
-        sig = 10.0
-        self.set_rssi_and_wait(sig)
+        self.assertEqual(self.sm.state, State.gps)
 
-        checker = self.sm.halrcomps["check-step"]
-        az_in = checker.getpin("az_in").get()
-        el_in = checker.getpin("el_in").get()
+    def test_high_signal_state(self):
+        high_sig = 10.0
+        self.set_rssi_and_wait(high_sig)
 
-        if az_in == -1.0:
-            self.assertNotEqual(el_in, -1.0)
-        elif el_in == -1.0:
-            self.assertNotEqual(az_in, -1.0)
-        else:
-            self.assertFalse(True)
+        self.assertEqual(self.sm.state, State.tracking)
 
- #   def test_idle_until_udp(self):
+    def test_low_to_high_to_low_signal(self):
+        low_sig = 1.0
+        self.set_rssi_and_wait(low_sig)
 
+        self.assertEqual(self.sm.state, State.gps)
 
-    """
-    def test_calibration(self):
-        pass
+        high_sig = 10.0
+        self.set_rssi_and_wait(high_sig)
 
-    def test_gps_checker(self):
-        pass
+        self.assertEqual(self.sm.state, State.tracking)
 
-    def test_reset_pos(self):
-        pass
+        low_sig = 1.0
+        self.set_rssi_and_wait(low_sig)
 
-    def test_increasing_signal(self):
-        pass
+        self.assertEqual(self.sm.state, State.gps)
 
-    def test_decreasing_signal(self):
-        pass
-    """
 
     def set_rssi_and_wait(self, val):
         self.sm.halrcomps["rrssi"].getpin("out").set(val)
@@ -81,6 +73,8 @@ class SystemTest(BaseTest):
         self.wait()
 
         self.clear()
+
+
 
 if __name__ == '__main__':
     unittest.main()

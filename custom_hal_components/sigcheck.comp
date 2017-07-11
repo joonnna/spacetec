@@ -3,7 +3,7 @@ pin in float in;
 pin out float out0;
 pin out float out1;
 pin out bit out2;
-param rw float sig_limit = 3.0;
+param rw float sig_limit;
 param rw bit axis;
 function _;
 license "GPL"; // indicates GPL v2 or later

@@ -12,7 +12,7 @@ class Udpclient():
 
     def run(self, input_data=None):
         if input_data == None:
-            f = open("ptudata", "r")
+            f = open("/home/machinekit/machinekit/spacetec/data_files/ptudata", "r")
             data = f.read()
             f.close()
             lines = data.split("\n")

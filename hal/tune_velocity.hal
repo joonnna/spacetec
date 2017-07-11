@@ -31,9 +31,20 @@ net vpid-to-bldc.1 vpid.1.output bldc.1.value
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.1.feedback
 
-##########################
-#Single components
-##########################
+setp vlim.0.max 1.0
+setp vlim.0.min 0.0
+setp vlim.0.maxv 1.0
+
+setp vpid.0.Igain 0.0
+setp vpid.0.Pgain 0.0
+
+
+setp vlim.1.max 1.0
+setp vlim.1.min 0.0
+setp vlim.1.maxv 1.0
+
+setp vpid.1.Igain 0.0
+setp vpid.1.Pgain 0.0
 
 # functions #1
 addf vlim.0 fpthread

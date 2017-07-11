@@ -15,7 +15,6 @@ class GeneralThread(threading.Thread):
         while True:
             if self._should_stop():
                 self.cleanup()
-                print "EXITED THE FUCKING THREAD YOU DIPSHIT!"
                 return
 
             if self._args == None:

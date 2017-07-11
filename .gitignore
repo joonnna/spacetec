@@ -1,5 +1,6 @@
 *.pyc
 statemachine/ptudata
 statemachine/core
+python/control_unit/core
 hal_tests/core
 hal/core

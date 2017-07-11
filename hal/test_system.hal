@@ -14,6 +14,10 @@ loadrt lowpass
 loadrt near count=4
 loadrt and2
 
+# Test input components
+loadrt rssi_test
+loadrt test_encoder
+
 #Early definitons to link signal
 newcomp step
 newpin step step.track bit in
@@ -53,6 +57,17 @@ newcomp motor-feedback
 newpin motor-feedback motor-feedback.zero_az bit in
 newpin motor-feedback motor-feedback.zero_el bit in
 ready motor-feedback
+
+newcomp check-step
+newpin check-step check-step.az_out float in
+newpin check-step check-step.el_out float in
+newpin check-step check-step.az_in float in
+newpin check-step check-step.el_in float in
+ready check-step
+
+newcomp rbldc0
+newpin rbldc0 rbldc0.in float in
+ready rbldc0
 
 setp ppid.0.enable true
 setp ppid.1.enable true
@@ -105,11 +120,14 @@ net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1
 
 net filter-to-sigcheck lowpass.0.out sigcheck.0.in
 
-net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
+net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0 check-step.az_in
 
-net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1
+net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1 check-step.az_out
 
 net near-to-and.0 near.2.out and2.0.in0
+
+#For tests
+net bldc-out0 bldc.0.out rbldc0.in
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.0.feedback
@@ -140,6 +158,9 @@ net reset.0 abspos.az_reset scale.0.offset
 ######################################
 #2th set of components and connections
 ######################################
+newcomp rbldc1
+newpin rbldc1 rbldc1.in float in
+ready rbldc1
 
 setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
 setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
@@ -165,11 +186,14 @@ net vmux-to-vlim.1 vmuxn.1.out vlim.1.in
 
 net vpid-to-bldc.1 vpid.1.output bldc.1.value
 
-net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
+net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0 check-step.el_in
 
-net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1
+net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1 check-step.el_out
 
 net near-to-and.1 near.3.out and2.0.in1
+
+#test
+net bldc-out1 bldc.1.out rbldc1.in
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.1.feedback
@@ -196,6 +220,10 @@ net reset.1 abspos.el_reset scale.2.offset
 #Single components
 ##########################
 
+newcomp rrssi
+newpin rrssi rrssi.out float out
+ready rrssi
+
 newcomp rsigcheck
 newpin rsigcheck rsigcheck.in bit in
 ready rsigcheck
@@ -204,13 +232,25 @@ setp scale.0.gain 1
 setp scale.1.gain 1
 setp scale.2.gain 1
 setp scale.3.gain 1
+
+setp scale.1.offset [COMPASS_OFFSET]AZ_OFFSET
+setp scale.3.offset [COMPASS_OFFSET]EL_OFFSET
+
 setp lowpass.0.gain 1
 
 net and-to-step and2.0.out step.track
 
+net set-rssi rrssi.out rssi-test.0.in
+
 net sig-to-python sigcheck.0.out2 rsigcheck.in
+net rssi-to-filter rssi-test.0.out lowpass.0.in
+
+net enc-to-abs.0 test-encoder.0.out0 scale.0.in
+net enc-to-abs.1 test-encoder.0.out1 scale.2.in
 
 # functions #1
+addf test-encoder.0 fpthread
+addf rssi-test.0 fpthread
 addf lowpass.0 fpthread
 addf sigcheck.0 fpthread
 

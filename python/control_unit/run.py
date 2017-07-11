@@ -1,5 +1,4 @@
 import time
-import argparse
 from general_thread import *
 from machinekit import launcher
 from statemachine.state import *
@@ -8,35 +7,28 @@ from udpComm.server import *
 def start(path, ip, port):
     sm = Statemachine(path)
     comm = Communication(port, ip)
-    comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_pos)
+    comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_gps_pos)
 
     sm.run(comm_thread)
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--path", required=True, help="Filepath to the initial position file, containing azimuth and elevation paramterts on two seperate lines.")
-parser.add_argument("--test", type=bool, default=False, help="Start halrun from python or not, used to be able t run halrun separetley")
-
 ip = "192.168.5.4"
 port = 2674
 
-args = parser.parse_args()
+project_folder = "/home/machinekit/machinekit/spacetec/"
 
-if args.test:
-    launcher.check_installation()
-    launcher.cleanup_session()  # kill any running Machinekit instances
-    launcher.start_realtime()  # start Machinekit realtime environment
 
-    #TODO relpath... wtf man...absolute path or no path
-    launcher.load_hal_file("../hal/system.hal")  # load the main HAL file
-    launcher.register_exit_handler()  # enable on ctrl-C, needs to executed after HAL files
+launcher.check_installation()
+launcher.cleanup_session()  # kill any running Machinekit instances
+launcher.start_realtime()  # start Machinekit realtime environment
 
-    launcher.ensure_mklauncher()  # ensure mklauncher is started
+#TODO relpath... wtf man...absolute path or no path
+launcher.load_hal_file(project_folder + "hal/system.hal", project_folder + "configs/test_config.ini")  # load the main HAL file
+launcher.register_exit_handler()  # enable on ctrl-C, needs to executed after HAL files
 
-    time.sleep(1)
+launcher.ensure_mklauncher()  # ensure mklauncher is started
 
-    start(args.path, ip, port)
+time.sleep(1)
 
-else:
-    print "Only starting statemachine..."
-    start(args.path, ip, port)
+start(project_folder + "data_files/pos", ip, port)
+

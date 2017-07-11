@@ -1,0 +1,58 @@
+newthread fpthread fp 10000000
+loadrt limit1 names=plim.0,plim.1
+loadrt pid names=ppid.0,ppid.1
+loadrt bldc cfg=nT,nT #Probably wrong config
+
+setp ppid.0.enable true
+setp ppid.1.enable true
+
+######################################
+#1st set of components and connections
+######################################
+
+# Net's for 1st set
+
+#Set limits
+
+#System flow
+net plim-to-ppid.0 plim.0.out ppid.0.command
+
+net ppid-to-bldc.0 ppid.0.output bldc.0.value
+
+#Need motor feedback (velocity/pos)
+#net enc-to-ppid enc.. ppid.0.feedback
+
+######################################
+#2th set of components and connections
+######################################
+
+net ppid-to-bldc.1 ppid.1.output bldc.1.value
+
+#Need motor feedback (velocity/pos)
+#net enc-to-ppid enc.. ppid.1.feedback
+
+setp plim.0.max 1.0
+setp plim.0.min 0.0
+
+setp ppid.0.Igain 0.0
+setp ppid.0.Pgain 0.0
+
+setp plim.1.max 1.0
+setp plim.1.min 0.0
+
+setp ppid.1.Igain 0.0
+setp ppid.1.Pgain 0.0
+
+# functions #1
+addf plim.0 fpthread
+addf ppid.0.do-pid-calcs fpthread
+addf bldc.0 fpthread
+
+addf plim.1 fpthread
+addf ppid.1.do-pid-calcs fpthread
+addf bldc.1 fpthread
+
+start
+
+# Haltalk
+loadusr haltalk
