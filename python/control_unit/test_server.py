@@ -26,8 +26,6 @@ class CommTest(unittest.TestCase):
 
         pos = extract_pos(data)
 
-        print pos
-
         self.thread = thread.start_new_thread(self.client.run, (data,))
 
         received_pos = self.comm._receive_data()

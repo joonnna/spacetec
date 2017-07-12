@@ -14,8 +14,30 @@ class SystemTest(BaseTest):
 
         self.client = True
 
+    def test_input_output(self):
+        self.sm.halrcomps["rrssi"].getpin("out").set(self.sm.sig_limit + 1.0)
+
+        out0 = self.sm.halrcomps["rbldc0"].getpin("in")
+        out0.on_value_changed.append(self.wait_callback)
+
+        out1 = self.sm.halrcomps["rbldc1"].getpin("in")
+        out1.on_value_changed.append(self.wait_callback)
+
+        self.wait()
+
+        val0 = out0.get()
+        val1 = out1.get()
+        print val0, val1
+
+        if val0 != 0.0:
+            self.assertNotEqual(val0, 0.0)
+        elif val1 != 0.0:
+            self.assertNotEqual(val1, 0.0)
+        else:
+            self.assertNotEqual(val0, 0.0)
+
     def test_gps_output(self):
-        low_sig = 1.0
+        low_sig = self.sm.sig_limit - 1.0
         self.set_rssi_and_wait(low_sig)
 
         out0 = self.sm.halrcomps["rbldc0"].getpin("in")

@@ -3,28 +3,38 @@ from udpComm.server import *
 from base_test_class import *
 from general_thread import *
 import time
+import thread
 
-class CalibrationTest(BaseTest):
+class CalibrationTest(unittest.TestCase):
 
-    def init(self):
-        comm = Communication(self.port, self.ip)
+    def setUp(self):
+        start_hal("/home/machinekit/machinekit/spacetec/hal/test_system.hal")
 
-        self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
-        self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
+        self.pos_filepath = "/home/machinekit/machinekit/spacetec/data_files/pos"
+        #self.pos_file = open(self.pos_filepath, "w")
 
-        self.client = True
+    def tearDown(self):
+        pass
 
-    def test_alternation(self):
-        checker = self.sm.halrcomps["check-step"]
-        az_in = checker.getpin("az_in").get()
-        el_in = checker.getpin("el_in").get()
+    def test_calibrate_az(self):
+        az_start = 0.0
+        f = open(self.pos_filepath, "w")
+        f.write("%f\n%f" % (az_start, 0.0))
+        f.close()
 
-        if az_in == -1.0:
-            self.assertNotEqual(el_in, -1.0)
-        elif el_in == -1.0:
-            self.assertNotEqual(az_in, -1.0)
-        else:
-            self.assertFalse(True)
+        test_feedback = sm.halrcomps["test-feedback"]
+
+        stop_az = test_feedback.getpin("stop_az")
+        stop_el = test_feedback.getpin("stop_el")
+
+        stop_az.set(False)
+        stop_el.set(False)
+
+
+
+
+        motor_feedback = self.halrcomps["motor-feedback"]
+
 
 if __name__ == '__main__':
     unittest.main()

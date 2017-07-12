@@ -42,16 +42,25 @@ newpin abspos abspos.az_reset float out
 newpin abspos abspos.el_reset float out
 ready abspos
 
-newcomp poslim
-newpin poslim poslim.max_az float out
-newpin poslim poslim.min_az float out
-newpin poslim poslim.max_el float out
-newpin poslim poslim.min_el float out
-ready poslim
+newcomp pos-comps
+newpin pos-comps pos-comps.max_az float io
+newpin pos-comps pos-comps.min_az float io
+newpin pos-comps pos-comps.max_el float io
+newpin pos-comps pos-comps.min_el float io
+ready pos-comps
+
+newcomp vel-comps
+newpin vel-comps vel-comps.max_vel float io
+newpin vel-comps vel-comps.min_vel float io
+ready vel-comps
 
 newcomp motor-feedback
 newpin motor-feedback motor-feedback.zero_az bit in
 newpin motor-feedback motor-feedback.zero_el bit in
+newpin motor-feedback motor-feedback.az_pos float in
+newpin motor-feedback motor-feedback.el_pos float in
+newpin motor-feedback motor-feedback.reset_el bit out
+newpin motor-feedback motor-feedback.reset_az bit out
 ready motor-feedback
 
 setp ppid.0.enable true
@@ -81,8 +90,30 @@ setp vpid.0.Igain [VEL_PID]VEL_PID_IGAIN
 setp ppid.0.Pgain [POS_PID]POS_PID_PGAIN
 setp ppid.0.Igain [POS_PID]POS_PID_PGAIN
 
+setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
+setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
+
+setp plim.1.max [POS_LIMS]POS_LIM_MAX
+setp plim.1.min [POS_LIMS]POS_LIM_MIN
+
+setp vpid.1.Pgain [VEL_PID]VEL_PID_PGAIN
+setp vpid.1.Igain [VEL_PID]VEL_PID_IGAIN
+
+setp ppid.1.Pgain [POS_PID]POS_PID_PGAIN
+setp ppid.1.Igain [POS_PID]POS_PID_PGAIN
+
 setp near.2.difference [GPS_LIMITS]AZ_LIM
 setp near.3.difference [GPS_LIMITS]EL_LIM
+
+net max_az.0 pos-comps.max_az plim.0.max
+net min_az.0 pos-comps.min_az plim.0.min
+
+net max_el.1 pos-comps.max_el plim.1.max
+net min_el.1 pos-comps.min_el plim.1.min
+
+net vel-max vel-comps.max_vel vlim.0.max vlim.1.max
+net vel-min vel-comps.min_vel vlim.0.min vlim.1.min
+
 
 # Net's for 1st set
 
@@ -120,10 +151,6 @@ net near-to-python.0 near.0.out motor-feedback.zero_az
 
 #Remote component nets
 
-#Lims
-net pos-max0 poslim.max_az plim.0.max
-net pos-min0 poslim.min_az plim.0.min
-
 #az gps mux
 net sel.0 gpsmux.az_sel muxn.0.sel
 net gps_az gpsmux.az_gps muxn.0.in1 near.2.in2
@@ -140,18 +167,6 @@ net reset.0 abspos.az_reset scale.0.offset
 ######################################
 #2th set of components and connections
 ######################################
-
-setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
-setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
-
-setp plim.1.max [POS_LIMS]POS_LIM_MAX
-setp plim.1.min [POS_LIMS]POS_LIM_MIN
-
-setp vpid.1.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.1.Igain [VEL_PID]VEL_PID_IGAIN
-
-setp ppid.1.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.1.Igain [POS_PID]POS_PID_PGAIN
 
 net mux-to-plim.1 muxn.1.out plim.1.in
 
@@ -177,9 +192,6 @@ net near-to-and.1 near.3.out and2.0.in1
 #net enc-to-near.. near.1.in2
 net near-to-python.1 near.1.out motor-feedback.zero_el
 
-net pos-max1 poslim.max_el plim.1.max
-net pos-min1 poslim.min_el plim.1.min
-
 net sel.1 gpsmux.el_sel muxn.1.sel
 net gps_el gpsmux.el_gps muxn.1.in1 near.3.in2
 
@@ -189,7 +201,6 @@ net vinput.1 velmux.el_out vmuxn.1.in1
 
 net abspos.1 scale.2.out abspos.el_in scale.3.in
 net reset.1 abspos.el_reset scale.2.offset
-
 
 
 ##########################

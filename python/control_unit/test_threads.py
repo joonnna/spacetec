@@ -10,11 +10,11 @@ class ThreadsTest(BaseTest):
         comm = Communication(self.port, self.ip)
 
         self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
-        self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
-
-        self.client = True
+        #self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
 
     def test_read_init_pos(self):
+        self.start_client()
+
         val = 5.4
         val2 = 10.4
         self.sm.pos_thread.stop()
@@ -35,6 +35,7 @@ class ThreadsTest(BaseTest):
         self.assertEqual(val2, el)
 
     def test_auto_restart_threads(self):
+        self.start_client()
         time.sleep(self.sm.check_threads_timeout)
         self.sm.comm_thread.stop()
         self.sm.pos_thread.stop()

@@ -7,15 +7,29 @@ def read_config():
 
     dict = {}
 
-    dict["pos_pid_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
-    dict["pos_pid_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
+    dict["calibrate_pos_igain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_IGAIN")
+    dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
 
-    dict["vel_pid_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
-    dict["vel_pid_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
+    dict["calibrate_velocity_igain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_IGAIN")
+    dict["calibrate_velocity_pgain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_PGAIN")
 
+    dict["calibrate_max_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
+    dict["calibrate_min_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
 
-    dict["vel_lim_max"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
-    dict["vel_lim_min"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
+    dict["pos_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
+    dict["pos_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
+
+    dict["velocity_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
+    dict["velocity_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
+
+    dict["max_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
+    dict["min_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
+
+    dict["callibrate_velocity_igain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_IGAIN")
+    dict["calibrate_velocity_pgain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_PGAIN")
+
+    dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
+    dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
 
     dict["pos_timeout"] = config.getfloat("THREAD_TIMEOUTS", "POS_THREAD")
     dict["check_threads_timeout"] = config.getfloat("THREAD_TIMEOUTS", "CHECK_THREADS")
@@ -37,6 +51,8 @@ def read_config():
 
     dict["overide_gps_el"] = config.getfloat("OVERIDE_GPS_LIMS", "EL_LIM")
     dict["overide_gps_height"] = config.getfloat("OVERIDE_GPS_LIMS", "HEIGHT_LIM")
+
+    dict["sig_lim"] = config.getfloat("SIGNAL", "SIGNAL_LIMIT")
 
 
     return dict

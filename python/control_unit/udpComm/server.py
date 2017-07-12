@@ -3,6 +3,7 @@ import math
 import gps
 import thread
 import time
+import logging
 
 class Communication():
     def __init__(self, port, ip):
@@ -26,6 +27,11 @@ class Communication():
         self._session = gps.gps(host="localhost", port="2947")
         self._session.stream(flags=gps.WATCH_JSON)
 
+        logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
+        self.logger = logging.getLogger("udpserver")
+
+        self.logger.info("Inited udp server")
+
 #        print self._session.fix.__dict__
 
 
@@ -40,16 +46,17 @@ class Communication():
 
     def shutdown(self):
  #       self._socket.shutdown(socket.SHUT_RDWR)
+        self.logger.info("Exiting udp server")
         self._socket.close()
 
     def _calc_pos(self, data):
-        #longtitude  = data[0]
-        #latitude    = data[1]
-        #height      = data[2]
+        longtitude  = data[0]
+        latitude    = data[1]
+        height      = data[2]
 
-        longtitude = 16.05
-        latitude   = 69.29
-        height     = 1.0
+        #longtitude = 16.05
+        #latitude   = 69.29
+        #height     = 1.0
 
         self._lock.acquire()
         loc_long = 16.03
