@@ -12,7 +12,7 @@ loadrt sigcheck
 loadrt steptrack count=2
 loadrt lowpass
 loadrt near count=4
-loadrt and2
+loadrt and2 names=angle_and,state_and
 
 # Test input components
 loadrt rssi_test
@@ -172,7 +172,12 @@ net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0 check-step.az_in
 
 net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1 check-step.az_out
 
-net near-to-and.0 near.2.out and2.0.in0
+net near-to-and.0 near.2.out angle_and.in0
+
+net angle-to-state angle_and.out state_and.in0
+net sig-to-state sigcheck.0.out2 state_and.in1
+net state-to-python state_and.out step.track
+
 
 #For tests
 net bldc-out0 bldc.0.out rbldc0.in
@@ -223,7 +228,7 @@ net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0 check-step.el_in
 
 net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1 check-step.el_out
 
-net near-to-and.1 near.3.out and2.0.in1
+net near-to-and.1 near.3.out angle_and.in1
 
 #test
 net bldc-out1 bldc.1.out rbldc1.in
@@ -254,10 +259,6 @@ newcomp rrssi
 newpin rrssi rrssi.out float out
 ready rrssi
 
-newcomp rsigcheck
-newpin rsigcheck rsigcheck.in bit in
-ready rsigcheck
-
 setp scale.0.gain 1
 setp scale.1.gain 1
 setp scale.2.gain 1
@@ -268,11 +269,8 @@ setp scale.3.offset [COMPASS_OFFSET]EL_OFFSET
 
 setp lowpass.0.gain 1
 
-net and-to-step and2.0.out step.track
-
 net set-rssi rrssi.out rssi-test.0.in
 
-net sig-to-python sigcheck.0.out2 rsigcheck.in
 net rssi-to-filter rssi-test.0.out lowpass.0.in
 
 net enc-to-abs.0 test-encoder.0.out0 scale.0.in
@@ -296,7 +294,7 @@ addf vlim.0 fpthread
 addf vpid.0.do-pid-calcs fpthread
 addf bldc.0 fpthread
 
-
+addf state_and fpthread
 addf near.1 fpthread
 addf scale.2 fpthread
 addf scale.3 fpthread

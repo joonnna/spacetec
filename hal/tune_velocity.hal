@@ -1,7 +1,19 @@
 newthread fpthread fp 10000000
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1
-loadrt bldc cfg=nT,nT #Probably wrong config
+
+loadrt hostmot2
+
+newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo"
+
+# load threads
+
+# load modules
+loadrt bldc cfg=q,q
+# må ha 6 scales mellom bldc og pwmgen
+# og 4 scales mellom encodere ogsånt
+loadrt scale count=6
+
 
 setp vpid.0.enable true
 setp vpid.1.enable true
@@ -17,8 +29,6 @@ setp vpid.1.enable true
 #System flow
 net vlim-to-vpid.0 vlim.0.out vpid.0.command
 
-net vpid-to-bldc.0 vpid.0.output bldc.0.value
-
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.0.feedback
 
@@ -26,7 +36,6 @@ net vpid-to-bldc.0 vpid.0.output bldc.0.value
 #2th set of components and connections
 ######################################
 
-net vpid-to-bldc.1 vpid.1.output bldc.1.value
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.1.feedback
@@ -46,14 +55,112 @@ setp vlim.1.maxv 1.0
 setp vpid.1.Igain 0.0
 setp vpid.1.Pgain 0.0
 
+
+
+
+## Nets
+
+# add:
+# bldc to pwmgen
+#net bldc.0.A-to-pwmgen bldc.0.A-value => hm2_de0n.0.3pwmgen.00.A-value
+#net bldc.0.B-to-pwmgen bldc.0.B-value => hm2_de0n.0.3pwmgen.00.B-value
+#net bldc.0.C-to-pwmgen bldc.0.C-value => hm2_de0n.0.3pwmgen.00.C-value
+#net bldc.1.A-to-pwmgen bldc.1.A-value => hm2_de0n.0.3pwmgen.01.A-value
+#net bldc.1.B-to-pwmgen bldc.1.B-value => hm2_de0n.0.3pwmgen.01.B-value
+#net bldc.1.C-to-pwmgen bldc.1.C-value => hm2_de0n.0.3pwmgen.01.C-value
+
+# bldc to scale
+net bldc.0_A-to-scale bldc.0.A-value => scale.0.in
+net bldc.0_B-to-scale bldc.0.B-value => scale.1.in
+net bldc.0_C-to-scale bldc.0.C-value => scale.2.in
+net bldc.1_A-to-scale bldc.1.A-value => scale.3.in
+net bldc.1_B-to-scale bldc.1.B-value => scale.4.in
+net bldc.1_C-to-scale bldc.1.C-value => scale.5.in
+
+# scale to pwmgen
+net scale_0-to-pwmgen_01 scale.0.out => hm2_de0n.0.pwmgen.00.value
+net scale_1-to-pwmgen_02 scale.1.out => hm2_de0n.0.pwmgen.01.value
+net scale_2-to-pwmgen_03 scale.2.out => hm2_de0n.0.pwmgen.02.value
+net scale_3-to-pwmgen_04 scale.3.out => hm2_de0n.0.pwmgen.03.value
+net scale_4-to-pwmgen_05 scale.4.out => hm2_de0n.0.pwmgen.04.value
+net scale_5-to-pwmgen_06 scale.5.out => hm2_de0n.0.pwmgen.05.value
+
+# encoder position to scale
+#net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.6.in
+#net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.7.in
+
+# encoder rawcount to bldc
+net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcounts
+net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
+
+# encoder velocity to velocity pid
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
+
+# vpid to bldc
+net vpid-to-bldc.0 vpid.0.output bldc.0.value
+net vpid-to-bldc.1 vpid.1.output bldc.1.value
+
+# SPI
+
+## Parameter values
+
+# add:
+# enable pwmgen
+setp hm2_de0n.0.pwmgen.00.enable TRUE
+setp hm2_de0n.0.pwmgen.01.enable TRUE
+setp hm2_de0n.0.pwmgen.02.enable TRUE
+setp hm2_de0n.0.pwmgen.03.enable TRUE
+setp hm2_de0n.0.pwmgen.04.enable TRUE
+setp hm2_de0n.0.pwmgen.05.enable TRUE
+
+# change frequency
+setp hm2_de0n.0.pwmgen.pwm_frequency 40000
+
+# set bldc scale and poles
+setp bldc.0.scale 2048
+setp bldc.0.poles 8
+
+# set bldc to pwmgen scale gain
+setp scale.0.gain 0.5
+setp scale.1.gain 0.5
+setp scale.2.gain 0.5
+setp scale.3.gain 0.5
+setp scale.4.gain 0.5
+setp scale.5.gain 0.5
+
+# set bldc to pwmgen scale offset
+setp scale.0.offset 0.5
+setp scale.1.offset 0.5
+setp scale.2.offset 0.5
+setp scale.3.offset 0.5
+setp scale.4.offset 0.5
+setp scale.5.offset 0.5
+
+
+## Realtime thread/function links
+
+addf hm2_de0n.0.read fpthread
+addf hm2_de0n.0.write fpthread
+
+addf bldc.0 fpthread
+addf bldc.1 fpthread
+
+addf scale.0.funct fpthread
+addf scale.1.funct fpthread
+addf scale.2.funct fpthread
+addf scale.3.funct fpthread
+addf scale.4.funct fpthread
+addf scale.5.funct fpthread
+
+
+
 # functions #1
 addf vlim.0 fpthread
 addf vpid.0.do-pid-calcs fpthread
-addf bldc.0 fpthread
 
 addf vlim.1 fpthread
 addf vpid.1.do-pid-calcs fpthread
-addf bldc.1 fpthread
 
 start
 

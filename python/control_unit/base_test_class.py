@@ -65,8 +65,9 @@ class BaseTest(unittest.TestCase):
         self.exit_event.set()
         self.cleanup_event.wait()
 
-        self.test_client.shutdown()
-        self.client_exit_event.wait()
+        if self.no_client == None:
+            self.test_client.shutdown()
+            self.client_exit_event.wait()
 
 def mock_up_func():
     pass

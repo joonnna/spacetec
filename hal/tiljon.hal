@@ -7,26 +7,45 @@ newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB
 # load threads
 
 # load modules
-
+loadrt bldc cfg=q,q
+# må ha 6 scales mellom bldc og pwmgen
+# og 4 scales mellom encodere ogsånt
+loadrt scale count=10
 
 ## Nets
 
 # add:
 # bldc to pwmgen
-net bldc.0.A-to-pwmgen bldc.0.A-value => hm2_de0n.0.3pwmgen.00.A-value
-net bldc.0.B-to-pwmgen bldc.0.B-value => hm2_de0n.0.3pwmgen.00.B-value
-net bldc.0.C-to-pwmgen bldc.0.C-value => hm2_de0n.0.3pwmgen.00.C-value
-net bldc.1.A-to-pwmgen bldc.1.A-value => hm2_de0n.0.3pwmgen.01.A-value
-net bldc.1.B-to-pwmgen bldc.1.B-value => hm2_de0n.0.3pwmgen.01.B-value
-net bldc.1.C-to-pwmgen bldc.1.C-value => hm2_de0n.0.3pwmgen.01.C-value
+#net bldc.0.A-to-pwmgen bldc.0.A-value => hm2_de0n.0.3pwmgen.00.A-value
+#net bldc.0.B-to-pwmgen bldc.0.B-value => hm2_de0n.0.3pwmgen.00.B-value
+#net bldc.0.C-to-pwmgen bldc.0.C-value => hm2_de0n.0.3pwmgen.00.C-value
+#net bldc.1.A-to-pwmgen bldc.1.A-value => hm2_de0n.0.3pwmgen.01.A-value
+#net bldc.1.B-to-pwmgen bldc.1.B-value => hm2_de0n.0.3pwmgen.01.B-value
+#net bldc.1.C-to-pwmgen bldc.1.C-value => hm2_de0n.0.3pwmgen.01.C-value
+
+# bldc to scale
+net bldc.0_A-to-scale bldc.0.A-value => scale.0.in
+net bldc.0_B-to-scale bldc.0.B-value => scale.1.in
+net bldc.0_C-to-scale bldc.0.C-value => scale.2.in
+net bldc.1_A-to-scale bldc.1.A-value => scale.3.in
+net bldc.1_B-to-scale bldc.1.B-value => scale.4.in
+net bldc.1_C-to-scale bldc.1.C-value => scale.5.in
+
+# scale to pwmgen
+net scale_0-to-pwmgen_01 scale.0.out => hm2_de0n.0.pwmgen.00.value
+net scale_1-to-pwmgen_02 scale.1.out => hm2_de0n.0.pwmgen.01.value
+net scale_2-to-pwmgen_03 scale.2.out => hm2_de0n.0.pwmgen.02.value
+net scale_3-to-pwmgen_04 scale.3.out => hm2_de0n.0.pwmgen.03.value
+net scale_4-to-pwmgen_05 scale.4.out => hm2_de0n.0.pwmgen.04.value
+net scale_5-to-pwmgen_06 scale.5.out => hm2_de0n.0.pwmgen.05.value
 
 # encoder position to scale
-net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.0.in
-net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.1.in
+net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.6.in
+net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.7.in
 
-# encoder count to bldc
-net encoder.0.count-to-bldc hm2_de0n.0.encoder.00.count => bldc.0.value
-net encoder.1.count-to-bldc hm2_de0n.0.encoder.01.count => bldc.1.value
+# encoder rawcount to bldc
+net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcount => bldc.0.rawcounts
+net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcount => bldc.1.rawcounts
 
 # encoder velocity to velocity pid
 net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => pid.2.feedback
@@ -39,12 +58,49 @@ net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => pid.3.feedback
 
 # add:
 # enable pwmgen
-setp hm2_de0n.0.3pwmgen.00.enable TRUE
-setp hm2_de0n.0.3pwmgen.01.enable TRUE
+setp hm2_de0n.0.pwmgen.00.enable TRUE
+setp hm2_de0n.0.pwmgen.01.enable TRUE
+setp hm2_de0n.0.pwmgen.02.enable TRUE
+setp hm2_de0n.0.pwmgen.03.enable TRUE
+setp hm2_de0n.0.pwmgen.04.enable TRUE
+setp hm2_de0n.0.pwmgen.05.enable TRUE
+
+# change frequency
+setp hm2_de0n.0.pwmgen.pwm_frequency 40000
+
+# set bldc scale and poles
+setp bldc.0.scale 2048
+setp bldc.0.poles 8
+
+# set bldc to pwmgen scale gain
+setp scale.0.gain 0.5
+setp scale.1.gain 0.5
+setp scale.2.gain 0.5
+setp scale.3.gain 0.5
+setp scale.4.gain 0.5
+setp scale.5.gain 0.5
+
+# set bldc to pwmgen scale offset
+setp scale.0.offset 0.5
+setp scale.1.offset 0.5
+setp scale.2.offset 0.5
+setp scale.3.offset 0.5
+setp scale.4.offset 0.5
+setp scale.5.offset 0.5
+
 
 ## Realtime thread/function links
 
 addf hm2_de0n.0.read thread
-addf hm2_de0n.0.read_gpio thread
 addf hm2_de0n.0.write thread
-addf hm2_de0n.0.write_gpio thread
+
+addf bldc.0 thread
+
+addf scale.0.funct thread
+addf scale.1.funct thread
+addf scale.2.funct thread
+addf scale.3.funct thread
+addf scale.4.funct thread
+addf scale.5.funct thread
+addf scale.6.funct thread
+addf scale.7.funct thread

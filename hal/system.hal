@@ -12,7 +12,7 @@ loadrt sigcheck
 loadrt steptrack count=2
 loadrt lowpass
 loadrt near count=4
-loadrt and2
+loadrt and2 names=angle_and,state_and
 
 #Early definitons to link signal
 newcomp step
@@ -140,7 +140,11 @@ net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
 
 net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1
 
-net near-to-and.0 near.2.out and2.0.in0
+net near-to-and.0 near.2.out angle_and.in0
+
+net angle-to-state angle_and.out state_and.in0
+net sig-to-state sigcheck.0.out2 state_and.in1
+net state-to-python state_and.out step.track
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.0.feedback
@@ -184,7 +188,7 @@ net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
 
 net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1
 
-net near-to-and.1 near.3.out and2.0.in1
+net near-to-and.1 near.3.out angle_and.in1
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.1.feedback
@@ -207,19 +211,11 @@ net reset.1 abspos.el_reset scale.2.offset
 #Single components
 ##########################
 
-newcomp rsigcheck
-newpin rsigcheck rsigcheck.in bit in
-ready rsigcheck
-
 setp scale.0.gain 1
 setp scale.1.gain 1
 setp scale.2.gain 1
 setp scale.3.gain 1
 setp lowpass.0.gain 1
-
-net and-to-step and2.0.out step.track
-
-net sig-to-python sigcheck.0.out2 rsigcheck.in
 
 # functions #1
 addf lowpass.0 fpthread
@@ -237,7 +233,7 @@ addf vlim.0 fpthread
 addf vpid.0.do-pid-calcs fpthread
 addf bldc.0 fpthread
 
-
+addf state_and fpthread
 addf near.1 fpthread
 addf scale.2 fpthread
 addf scale.3 fpthread

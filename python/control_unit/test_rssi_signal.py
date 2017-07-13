@@ -9,7 +9,7 @@ class RssiTest(BaseTest):
     def init(self):
 
         self.thread1 = new_thread(mock_up_func, mock_up_cleanup, 5.0)
-
+        self.no_client = True
         #Simulate client started
         self.sm.set_state(State.stop_idle)
 
@@ -44,7 +44,7 @@ class RssiTest(BaseTest):
     def set_rssi_and_wait(self, val):
         self.sm.halrcomps["rrssi"].getpin("out").set(val)
 
-        state = self.sm.halrcomps["rsigcheck"].getpin("in")
+        state = self.sm.halrcomps["step"].getpin("track")
         state.on_value_changed.append(self.wait_callback)
 
         self.wait()

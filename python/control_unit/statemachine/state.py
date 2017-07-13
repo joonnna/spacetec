@@ -46,7 +46,7 @@ class Statemachine():
         self.state = State.calibrating
         self.set_state(State.calibrating)
 
-        self.calibrate()
+        #self.calibrate()
         self.set_state(State.idle)
        # self.start_gps_checker_thread()
         self.reset_abspos(az, el)
@@ -75,11 +75,6 @@ class Statemachine():
         abspos.newpin("el_reset", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos.newpin("el_in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos.no_create = True
-
-        sigcheck = halremote.RemoteComponent("rsigcheck", debug=False)
-        sig = sigcheck.newpin("in", halremote.HAL_BIT, halremote.HAL_IN)
-        sig.on_value_changed.append(self.change_state)
-        sigcheck.no_create = True
 
         tracking = halremote.RemoteComponent("step", debug=False)
         track = tracking.newpin("track", halremote.HAL_BIT, halremote.HAL_IN)
@@ -116,7 +111,6 @@ class Statemachine():
         self.halrcomps[gps_mux.name] = gps_mux
         self.halrcomps[vel_mux.name] = vel_mux
         self.halrcomps[abspos.name] = abspos
-        self.halrcomps[sigcheck.name] = sigcheck
 
         if testing:
             self.logger.info("Creating test components")
@@ -173,12 +167,6 @@ class Statemachine():
         self.zero_el_event.wait()
         self.zero_el_event.clear()
         return self.halrcomps["motor-feedback"].getpin("el_pos").get()
-
-    def change_state(self, sig):
-        if sig:
-            self.set_state(State.gps)
-        else:
-            self.set_state(State.tracking)
 
     def _search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
@@ -370,17 +358,7 @@ class Statemachine():
         vel_comps = self.halrcomps["vel-comps"]
         vel_comps.getpin("max_vel").set(max)
         vel_comps.getpin("min_vel").set(min)
-    """
-    def set_velocity_pid_gains(self, igain, pgain):
-        vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("Igain").set(igain)
-        vel_comps.getpin("Pgain").set(pgain)
 
-    def set_pos_pid_gains(self, igain, pgain):
-        pos_comps = self.halrcomps["pos-comps"]
-        pos_comps.getpin("Igain").set(igain)
-        pos_comps.getpin("Pgain").set(pgain)
-    """
     def set_calibrate_velocity(self):
         #self.set_az_pos_limits(360.0, -360.0)
         #self.set_el_pos_limits(360.0, -360.0)
@@ -392,10 +370,10 @@ class Statemachine():
 
     def reset_az_encoder(self):
         component = self.halrcomps["motor-feedback"]
-        az_reset = component.getpin("az_reset")
+        az_reset = component.getpin("reset_az")
         az_reset.set(True)
         self.halrcomps["abspos"].getpin("az_reset").set(0.0)
-        az.reset.set(False)
+        az_reset.set(False)
 
     def calibrate_az(self):
         self.set_calibrate_velocity()

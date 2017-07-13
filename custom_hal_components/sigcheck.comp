@@ -9,9 +9,9 @@ function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
 if (in > sig_limit)
-    out2 = false;
-else
     out2 = true;
+else
+    out2 = false;
 
 if (axis)
 {
