@@ -4,18 +4,24 @@ import gps
 import thread
 import time
 import logging
+from parse_config import read_comm_config
+
 
 class Communication():
-    def __init__(self, port, ip):
+    def __init__(self):
         #print socket.gethostname()
         #print socket.gethostbyname(socket.gethostname())
+
+        config = read_comm_config()
+        ip = config["ip"]
+        port = config["port"]
+
+        self._loc_lat    = config["lat"]
+        self._loc_long   = config["long"]
+        self._loc_height = config["height"]
+
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.bind((ip, port))
-
-        self._lock = thread.allocate_lock()
-        self._loc_lat    = 0.0
-        self._loc_long   = 0.0
-        self._loc_height = 0.0
 
         self._long_start     = 171
         self._long_end       = 180
@@ -24,15 +30,10 @@ class Communication():
         self._height_start   = 192
         self._height_end     = 198
 
-        self._session = gps.gps(host="localhost", port="2947")
-        self._session.stream(flags=gps.WATCH_JSON)
-
         logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
         self.logger = logging.getLogger("udpserver")
 
         self.logger.info("Inited udp server")
-
-#        print self._session.fix.__dict__
 
 
     def _receive_data(self):
@@ -58,22 +59,55 @@ class Communication():
         #latitude   = 69.29
         #height     = 1.0
 
-        self._lock.acquire()
-        loc_long = 16.03
-        loc_lat = 69.30
-        loc_height = 0.0
-        self._lock.release()
 
+        a = 6378137.0
+        b = 6356752.31424518
+
+        f = (a-b)/a;
+        e_2 = 2*f - (f*f);
+
+        lat_0 = math.radians(self._loc_lat)
+        lon_0 = math.radians(self._loc_long)
+        h_0 = self._loc_height
+
+        lat_GPS = math.radians(latitude)
+        lon_GPS = math.radians(longtitude)
+        h_GPS = height
+
+
+        sin_lat_02 = math.sin(lat_0) * math.sin(lat_0)
+        sin_lat_gps_2 = math.sin(lat_GPS) * math.sin(lat_GPS)
+
+        N_0 = a/(math.sqrt(1-e_2 * sin_lat_02))
+        N_GPS = a/(math.sqrt(1-e_2 * sin_lat_gps_2))
+
+        X_0 = (N_0 + h_0) * math.cos(lat_0) * math.cos(lon_0)
+        Y_0 = (N_0 + h_0) * math.cos(lat_0) * math.sin(lon_0)
+        Z_0 = ((1-e_2) * N_0 + h_0) * math.sin(lat_0)
+        X_GPS = (N_GPS+h_GPS) * math.cos(lat_GPS) * math.cos(lon_GPS)
+        Y_GPS = (N_GPS+h_GPS) * math.cos(lat_GPS) * math.sin(lon_GPS)
+        Z_GPS = (N_GPS * (1-e_2) + h_GPS) * math.sin(lat_GPS)
+
+        #Calculate elevation
+        delta_x = X_GPS-X_0
+        delta_y = Y_GPS-Y_0
+        delta_z = Z_GPS-Z_0
+        delta_h = h_GPS-h_0
+
+        r = math.sqrt((delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z))
+
+        el_rad = math.asin(delta_h/r)
+        el_deg = math.degrees(el_rad)
+
+        """
         x = longtitude - loc_long
         y = latitude - loc_lat
         z = height - loc_height
 
-        r = math.sqrt((x*x + y*y + z*z))
+        r = math.math.sqrt((x*x + y*y + z*z))
+        """
 
-        el_rad = math.acos((z/r))
-        el_deg = math.degrees(el_rad)
-
-        az_rad = math.atan((y/x))
+        az_rad = math.atan((delta_x/delta_y))
 
         #TODO sketchy -180.0
         az_deg = 180.0 - math.degrees(az_rad)
@@ -84,24 +118,6 @@ class Communication():
         pass
         #self._session
 
-
-    def get_local_gps_pos(self):
-        #self._session.query("ao")
-
-        self._lock.acquire()
-        self._loc_lat    = self._session.fix.latitude
-        self._loc_long   = self._session.fix.longitude
-        self._loc_height = self._session.fix.altitude
-
-        if math.isnan(self._loc_height):
-            self._loc_height = 0.0
-
-
-#        print self._loc_lat
- #       print self._loc_long
-  #      print self._loc_height
-
-        self._lock.release()
 
     def run(self, cb):
         #print "Starting udp server"

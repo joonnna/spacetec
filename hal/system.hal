@@ -1,22 +1,86 @@
-newthread fpthread fp 10000000
+newthread fast_thread fp [HAL_THRAD_PERIODS]FAST_THREAD slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
+
 newinst muxn muxn.0 pincount=3
 newinst muxn muxn.1 pincount=3
-newinst muxn vmuxn.0 pincount=3
-newinst muxn vmuxn.1 pincount=3
-loadrt limit1 names=plim.0,plim.1
+newinst muxn vmuxn.0 pincount=4
+newinst muxn vmuxn.1 pincount=4
+loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
-loadrt bldc cfg=nT,nT #Probably wrong config
-loadrt scale count=4
+loadrt bldc cfg=q,q #Probably wrong config
+loadrt scale count=10 
 loadrt sigcheck
 loadrt steptrack count=2
 loadrt lowpass
 loadrt near count=4
 loadrt and2 names=angle_and,state_and
 
+loadrt hostmot2
+newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo"
+
+net bldc.0_A-to-scale bldc.0.A-value scale.4.in
+net bldc.0_B-to-scale bldc.0.B-value scale.5.in
+net bldc.0_C-to-scale bldc.0.C-value scale.6.in
+net bldc.1_A-to-scale bldc.1.A-value scale.7.in
+net bldc.1_B-to-scale bldc.1.B-value scale.8.in
+net bldc.1_C-to-scale bldc.1.C-value scale.9.in
+
+net scale_0-to-pwmgen_01 scale.4.out => hm2_de0n.0.pwmgen.00.value
+net scale_1-to-pwmgen_02 scale.5.out => hm2_de0n.0.pwmgen.01.value
+net scale_2-to-pwmgen_03 scale.6.out => hm2_de0n.0.pwmgen.02.value
+net scale_3-to-pwmgen_04 scale.7.out => hm2_de0n.0.pwmgen.03.value
+net scale_4-to-pwmgen_05 scale.8.out => hm2_de0n.0.pwmgen.04.value
+net scale_5-to-pwmgen_06 scale.9.out => hm2_de0n.0.pwmgen.05.value
+
+net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.0.in
+net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.2.in
+
+
+net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcount => bldc.0.rawcounts
+net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcount => bldc.1.rawcounts
+
+
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
+
+setp hm2_de0n.0.pwmgen.00.enable TRUE
+setp hm2_de0n.0.pwmgen.01.enable TRUE
+setp hm2_de0n.0.pwmgen.02.enable TRUE
+setp hm2_de0n.0.pwmgen.03.enable TRUE
+setp hm2_de0n.0.pwmgen.04.enable TRUE
+setp hm2_de0n.0.pwmgen.05.enable TRUE
+
+
+setp hm2_de0n.0.pwmgen.pwm_frequency 40000
+
+# set bldc scale and poles
+setp bldc.0.scale 2048
+setp bldc.0.poles 8
+
+setp bldc.1.scale 2048
+setp bldc.1.poles 8
+
+# set bldc to pwmgen scale gain
+setp scale.4.gain 0.5
+setp scale.5.gain 0.5
+setp scale.6.gain 0.5
+setp scale.7.gain 0.5
+setp scale.8.gain 0.5
+setp scale.9.gain 0.5
+
+# set bldc to pwmgen scale offset
+setp scale.4.offset 0.5
+setp scale.5.offset 0.5
+setp scale.6.offset 0.5
+setp scale.7.offset 0.5
+setp scale.8.offset 0.5
+setp scale.9.offset 0.5
+
+
 #Early definitons to link signal
 newcomp step
 newpin step step.track bit in
+newpin step step.manual s32 in
 ready step
 
 newcomp velmux
@@ -78,6 +142,12 @@ setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
+setp bldc-lim.0.max 1.0
+setp bldc-lim.0.min -1.0
+
+setp bldc-lim.1.max 1.0
+setp bldc-lim.1.min -1.0
+
 setp vlim.0.max [VEL_LIMS]VEL_LIM_MAX
 setp vlim.0.min [VEL_LIMS]VEL_LIM_MIN
 
@@ -130,7 +200,9 @@ net vmux-to-vlim vmuxn.0.out vlim.0.in
 
 net vlim-to-vpid.0 vlim.0.out vpid.0.command
 
-net vpid-to-bldc.0 vpid.0.output bldc.0.value
+net vpid-to-bldc-lim.0 vpid.0.output bldc-lim.0.in
+
+net lim-to-bldc.0 bldc-lim.0.out bldc.0.value
 
 net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1
 
@@ -182,7 +254,9 @@ net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
 
 net vmux-to-vlim.1 vmuxn.1.out vlim.1.in
 
-net vpid-to-bldc.1 vpid.1.output bldc.1.value
+net vpid-to-bldc-lim.1 vpid.1.output bldc-lim.1.in
+
+net lim-to-bldc.1 bldc-lim.1.out bldc.1.value
 
 net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
 
@@ -218,33 +292,47 @@ setp scale.3.gain 1
 setp lowpass.0.gain 1
 
 # functions #1
-addf lowpass.0 fpthread
-addf sigcheck.0 fpthread
 
-addf near.0 fpthread
-addf scale.0 fpthread
-addf scale.1 fpthread
-addf steptrack.0 fpthread
-addf muxn.0 fpthread
-addf plim.0 fpthread
-addf ppid.0.do-pid-calcs fpthread
-addf vmuxn.0 fpthread
-addf vlim.0 fpthread
-addf vpid.0.do-pid-calcs fpthread
-addf bldc.0 fpthread
+addf hm2_de0n.0.read slow_thread
+addf hm2_de0n.0.write slow_thread
 
-addf state_and fpthread
-addf near.1 fpthread
-addf scale.2 fpthread
-addf scale.3 fpthread
-addf steptrack.1 fpthread
-addf muxn.1 fpthread
-addf plim.1 fpthread
-addf ppid.1.do-pid-calcs fpthread
-addf vmuxn.1 fpthread
-addf vlim.1 fpthread
-addf vpid.1.do-pid-calcs fpthread
-addf bldc.1 fpthread
+addf lowpass.0 slow_thread
+addf sigcheck.0 slow_thread
+
+addf near.0 slow_thread
+addf scale.0 slow_thread
+addf scale.1 slow_thread
+addf steptrack.0 slow_thread
+addf muxn.0 slow_thread
+addf vmuxn.0 slow_thread
+addf bldc.0 slow_thread
+
+addf angle_and slow_thread
+addf state_and slow_thread
+
+addf near.1 slow_thread
+addf scale.2 slow_thread
+addf scale.3 slow_thread
+addf steptrack.1 slow_thread
+addf muxn.1 slow_thread
+addf vmuxn.1 slow_thread
+addf bldc.1 slow_thread
+
+# fast threads
+addf plim.0 fast_thread
+addf plim.1 fast_thread
+
+addf vlim.0 fast_thread
+addf vlim.1 fast_thread
+
+addf vpid.0.do-pid-calcs fast_thread
+addf vpid.1.do-pid-calcs fast_thread
+
+addf ppid.0.do-pid-calcs fast_thread
+addf ppid.1.do-pid-calcs fast_thread
+
+addf bldc-lim.0 fast_thread
+addf bldc-lim.1 fast_thread
 
 start
 

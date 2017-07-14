@@ -4,16 +4,12 @@ from machinekit import launcher
 from statemachine.state import *
 from udpComm.server import *
 
-def start(path, ip, port):
+def start(path):
     sm = Statemachine(path)
-    comm = Communication(port, ip)
+    comm = Communication()
     comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_gps_pos)
 
     sm.run(comm_thread)
-
-
-ip = "192.168.5.4"
-port = 2674
 
 project_folder = "/home/machinekit/machinekit/spacetec/"
 
@@ -30,5 +26,5 @@ launcher.ensure_mklauncher()  # ensure mklauncher is started
 
 time.sleep(1)
 
-start(project_folder + "data_files/pos", ip, port)
+start(project_folder + "data_files/pos")
 

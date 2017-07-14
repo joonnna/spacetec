@@ -2,12 +2,17 @@ import socket
 import time
 import threading
 import logging
+from parse_config import read_comm_config
+
 
 class Udpclient():
-    def __init__(self, port, ip):
+    def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.port = port
-        self.ip = ip
+
+        config = read_comm_config()
+        self.ip = config["ip"]
+        self.port = config["port"]
+
         self.exit_event = threading.Event()
         logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
         self.logger = logging.getLogger("udpclient")

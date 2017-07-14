@@ -8,7 +8,7 @@ from udpComm.client import *
 class StateTest(BaseTest):
 
     def init(self):
-        comm = Communication(self.port, self.ip)
+        comm = Communication()
 
         self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
 
@@ -37,7 +37,6 @@ class StateTest(BaseTest):
         #Needed for exiting all threads, comm stuck on recv
         self.start_client()
 
-
     def test_exit_idle_state_on_udp_recieve(self):
         self.assertEqual(self.sm.get_state(), State.idle)
 
@@ -54,20 +53,7 @@ class StateTest(BaseTest):
 
         self.assertEqual(self.sm.get_state(), State.gps_overide)
 
-        self.sm.set_state(State.gps)
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
-
-        self.sm.set_state(State.gps_overide)
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
-
-        self.sm.set_state(State.tracking)
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
-
-        self.sm.set_state(State.calibrating)
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
-
-        self.sm.set_state(State.idle)
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
+        self.change_to_all_states(State.gps_overide)
 
         self.sm.set_state(State.stop_overide)
         self.assertNotEqual(self.sm.get_state(), State.gps_overide)
@@ -78,6 +64,23 @@ class StateTest(BaseTest):
         time.sleep(self.update_timeout)
 
         self.assertNotEqual(self.sm.get_state(), State.gps_overide)
+
+
+    def change_to_all_states(self, state):
+        self.sm.set_state(State.gps)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.gps_overide)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.tracking)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.calibrating)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.idle)
+        self.assertEqual(self.sm.get_state(), state)
 
 if __name__ == '__main__':
     unittest.main()

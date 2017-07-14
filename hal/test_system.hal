@@ -3,7 +3,7 @@ newinst muxn muxn.0 pincount=3
 newinst muxn muxn.1 pincount=3
 newinst muxn vmuxn.0 pincount=3
 newinst muxn vmuxn.1 pincount=3
-loadrt limit1 names=plim.0,plim.1
+loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
 loadrt bldc cfg=nT,nT #Probably wrong config
@@ -21,6 +21,7 @@ loadrt test_encoder
 #Early definitons to link signal
 newcomp step
 newpin step step.track bit in
+newpin step step.manual s32 in
 ready step
 
 newcomp velmux
@@ -85,6 +86,12 @@ newpin test-feedback test-feedback.az float out
 newpin test-feedback test-feedback.el float out
 ready test-feedback
 
+newcomp test-set-angle 
+newpin test-set-angle test-set-angle.az_angle float io
+newpin test-set-angle test-set-angle.el_angle float io
+ready test-set-angle
+
+
 #setp test-feedback.stop_az True
 #setp test-feedback.stop_el True
 
@@ -107,6 +114,13 @@ setp vpid.1.enable true
 setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
+
+setp bldc-lim.0.max 1.0
+setp bldc-lim.0.min -1.0
+
+setp bldc-lim.1.max 1.0
+setp bldc-lim.1.min -1.0
+
 
 setp vlim.0.max [VEL_LIMS]VEL_LIM_MAX
 setp vlim.0.min [VEL_LIMS]VEL_LIM_MIN
@@ -147,6 +161,10 @@ net vel-min vel-comps.min_vel vlim.0.min vlim.1.min
 setp near.2.difference [GPS_LIMITS]AZ_LIM
 setp near.3.difference [GPS_LIMITS]EL_LIM
 
+net test_angle.0 near.2.difference test-set-angle.az_angle
+net test_angle.1 near.3.difference test-set-angle.el_angle
+
+
 # Net's for 1st set
 
 #Set limits
@@ -162,8 +180,11 @@ net vmux-to-vlim vmuxn.0.out vlim.0.in
 
 net vlim-to-vpid.0 vlim.0.out vpid.0.command
 
-net vpid-to-bldc.0 vpid.0.output bldc.0.value
+net vpid-to-bldc-lim.0 vpid.0.output bldc-lim.0.in
 
+net lim-to-bldc.0 bldc-lim.0.out bldc.0.value
+
+# abs-to-ppid? CHECK PLZ
 net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1
 
 net filter-to-sigcheck lowpass.0.out sigcheck.0.in
@@ -216,13 +237,16 @@ net mux-to-plim.1 muxn.1.out plim.1.in
 
 net plim-to-ppid.1 plim.1.out ppid.1.command
 
+#abs to ppid? check!
 net abs-to-ppid-step.1 scale.3.out ppid.1.feedback steptrack.1.in1
 
 net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
 
 net vmux-to-vlim.1 vmuxn.1.out vlim.1.in
 
-net vpid-to-bldc.1 vpid.1.output bldc.1.value
+net vpid-to-bldc-lim.1 vpid.1.output bldc-lim.1.in
+
+net lim-to-bldc.1 bldc-lim.1.out bldc.1.value
 
 net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0 check-step.el_in
 
@@ -259,6 +283,7 @@ newcomp rrssi
 newpin rrssi rrssi.out float out
 ready rrssi
 
+
 setp scale.0.gain 1
 setp scale.1.gain 1
 setp scale.2.gain 1
@@ -293,8 +318,17 @@ addf vmuxn.0 fpthread
 addf vlim.0 fpthread
 addf vpid.0.do-pid-calcs fpthread
 addf bldc.0 fpthread
-
+addf near.2 fpthread
+addf near.3 fpthread
+addf angle_and fpthread
 addf state_and fpthread
+
+
+addf bldc-lim.0 fpthread
+addf bldc-lim.1 fpthread
+
+
+
 addf near.1 fpthread
 addf scale.2 fpthread
 addf scale.3 fpthread

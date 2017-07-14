@@ -1,6 +1,5 @@
 import ConfigParser
 
-
 def read_config():
     config = ConfigParser.ConfigParser()
     config.read("/home/machinekit/machinekit/spacetec/configs/test_config.ini")
@@ -53,6 +52,5 @@ def read_config():
     dict["overide_gps_height"] = config.getfloat("OVERIDE_GPS_LIMS", "HEIGHT_LIM")
 
     dict["sig_lim"] = config.getfloat("SIGNAL", "SIGNAL_LIMIT")
-
 
     return dict

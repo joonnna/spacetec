@@ -13,6 +13,10 @@ class RssiTest(BaseTest):
         #Simulate client started
         self.sm.set_state(State.stop_idle)
 
+        self.sm.halrcomps["test-set-angle"].getpin("az_angle").set(10000000.0)
+        self.sm.halrcomps["test-set-angle"].getpin("el_angle").set(10000000.0)
+
+
     def test_low_signal_state(self):
         low_sig = self.sm.sig_limit - 1.0
         self.set_rssi_and_wait(low_sig)

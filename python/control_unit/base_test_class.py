@@ -40,7 +40,7 @@ class BaseTest(unittest.TestCase):
         self.port = 5530
         self.ip = "192.168.5.4"
 
-        self.test_client = Udpclient(self.port, self.ip)
+        self.test_client = Udpclient()
 
         self.pos_filepath = "/home/machinekit/machinekit/spacetec/data_files/pos"
         f = open(self.pos_filepath, "w")
@@ -65,9 +65,28 @@ class BaseTest(unittest.TestCase):
         self.exit_event.set()
         self.cleanup_event.wait()
 
-        if self.no_client == None:
+        if not hasattr(self, "no_client"):
             self.test_client.shutdown()
             self.client_exit_event.wait()
+
+
+    def change_to_all_states(self, state):
+        self.sm.set_state(State.gps)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.gps_overide)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.tracking)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.calibrating)
+        self.assertEqual(self.sm.get_state(), state)
+
+        self.sm.set_state(State.idle)
+        self.assertEqual(self.sm.get_state(), state)
+
+
 
 def mock_up_func():
     pass

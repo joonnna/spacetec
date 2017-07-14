@@ -1,10 +1,10 @@
-newthread fpthread fp 10000000
+newthread fpthread fp 1000000
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1
 
 loadrt hostmot2
 
-newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo"
+newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo num_stepgens=0"
 
 # load threads
 
@@ -27,7 +27,7 @@ setp vpid.1.enable true
 #Set limits
 
 #System flow
-net vlim-to-vpid.0 vlim.0.out vpid.0.command
+#net vlim-to-vpid.0 vlim.0.out vpid.0.command
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.0.feedback
@@ -94,7 +94,7 @@ net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcoun
 net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
 # encoder velocity to velocity pid
-net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.position => vpid.0.feedback
 net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
 
 # vpid to bldc
@@ -117,9 +117,23 @@ setp hm2_de0n.0.pwmgen.05.enable TRUE
 # change frequency
 setp hm2_de0n.0.pwmgen.pwm_frequency 40000
 
+# ONLY FOR TESTBED
+# set motor driver enable high
+setp hm2_de0n.0.gpio.042.out TRUE
+setp hm2_de0n.0.gpio.043.out TRUE
+setp hm2_de0n.0.gpio.044.out TRUE
+setp hm2_de0n.0.gpio.042.is_output TRUE
+setp hm2_de0n.0.gpio.043.is_output TRUE
+setp hm2_de0n.0.gpio.044.is_output TRUE
+
+
 # set bldc scale and poles
 setp bldc.0.scale 2048
 setp bldc.0.poles 8
+
+setp hm2_de0n.0.encoder.00.scale 11.37
+#setp hm2_de0n.0.encoder.01.scale 4096/360*10
+
 
 # set bldc to pwmgen scale gain
 setp scale.0.gain 0.5
@@ -163,6 +177,8 @@ addf vlim.1 fpthread
 addf vpid.1.do-pid-calcs fpthread
 
 start
+#loadusr halscope
+loadusr halmeter
 
 # Haltalk
 loadusr haltalk

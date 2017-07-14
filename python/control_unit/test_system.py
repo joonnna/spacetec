@@ -7,7 +7,7 @@ import time
 class SystemTest(BaseTest):
 
     def init(self):
-        comm = Communication(self.port, self.ip)
+        comm = Communication()
 
         self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
         self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)

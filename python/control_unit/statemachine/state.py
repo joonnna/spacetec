@@ -44,7 +44,6 @@ class Statemachine():
 
         #Need init value...
         self.state = State.calibrating
-        self.set_state(State.calibrating)
 
         #self.calibrate()
         self.set_state(State.idle)
@@ -78,6 +77,8 @@ class Statemachine():
 
         tracking = halremote.RemoteComponent("step", debug=False)
         track = tracking.newpin("track", halremote.HAL_BIT, halremote.HAL_IN)
+        manual = tracking.newpin("manual", halremote.HAL_S32, halremote.HAL_IN)
+        manual.on_value_changed.append(self.manual_state_callback)
         track.on_value_changed.append(self.check_gps)
         tracking.no_create = True
 
@@ -138,7 +139,14 @@ class Statemachine():
             test_feedback.newpin("stop_el", halremote.HAL_BIT, halremote.HAL_OUT)
             test_feedback.newpin("az", halremote.HAL_FLOAT, halremote.HAL_OUT)
             test_feedback.newpin("el", halremote.HAL_FLOAT, halremote.HAL_OUT)
+            test_feedback.no_create = True
 
+            gps_angle_check = halremote.RemoteComponent("test-set-angle", debug=False)
+            gps_angle_check.newpin("az_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
+            gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
+            gps_angle_check.no_create = True
+
+            self.halrcomps[gps_angle_check.name] = gps_angle_check
             self.halrcomps[test_feedback.name] = test_feedback
             self.halrcomps[check_step.name] = check_step
             self.halrcomps[rssi.name] = rssi
@@ -167,6 +175,19 @@ class Statemachine():
         self.zero_el_event.wait()
         self.zero_el_event.clear()
         return self.halrcomps["motor-feedback"].getpin("el_pos").get()
+
+    def manual_state_callback(self, val):
+        if val == 0:
+            self.set_state(State.stop_manual)
+        elif val == 1:
+            self.set_state(State.manual_position)
+        elif val == 2:
+            self.set_state(State.manual_velocity)
+        elif val == 3:
+            self.set_state(State.tracking_override)
+        else:
+            self.logger.Error("Received undefined state value in manual state callback, exiting manual for safety reasons")
+            self.set_state(State.stop_manual)
 
     def _search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
@@ -241,9 +262,9 @@ class Statemachine():
         self.halrcomps["velmux"].getpin("el_out").set(el)
 
     def send_gps_pos(self, pos):
-        if self.get_state() == State.idle:
+        if self.get_state() == Override.idle:
             self.logger.info("Got first UDP packet!")
-            self.set_state(State.stop_idle)
+            self.set_state(Override.stop_overide)
 
         az = pos[0]
         el = pos[1]
@@ -258,9 +279,9 @@ class Statemachine():
  #       self.logger.debug("\naz: %f\nel:%f\nheight:%f\n" % (az, el, height))
 
         if height < self.overide_gps_height:
-            self.set_state(State.gps_overide)
-        elif self.get_state() == State.gps_overide:
-            self.set_state(State.stop_overide)
+            self.set_state(Override.gps_overide)
+        elif self.get_state() == Override.gps_overide:
+            self.set_state(Override.stop_override)
 
 
     def start_pos_thread(self):
@@ -465,11 +486,29 @@ class Statemachine():
     def set_state(self, new_state):
         self.state_lock.acquire()
 
-        if new_state == State.stop_idle and self.state == State.idle:
+        """
+        if isinstance(new_state, Manual):
+            if new_state == Manual.stop_manual:
+                self.state = self.get_tracking_pin_state()
+            else:
+                self.state = new_state
+        elif isinstance(new_state, Override):
+            if new_state == Override.stop_override:
+                self.state = self.get_tracking_pin_state()
+            elif self.state != Override.gps:
+                self.state = new_state
+        elif not isinstance(self.state, Manual) and not isinstance(self.state, Override):
+            new_state == state
+        """
+        if new_state == State.manual_position or new_state == State.manual_velocity or new_state == state.tracking_override:
+            self.state = new_state
+        elif new_state == State.stop_idle and self.state == State.idle:
             self.state = self.get_tracking_pin_state()
         elif new_state == State.stop_overide and self.state == State.gps_overide:
             self.state = self.get_tracking_pin_state()
-        elif self.state != State.gps_overide and self.state != State.idle:
+        elif new_state == State.stop_manual and self.state == State.manual:
+            self.state = self.get_tracking_pin_state()
+        elif self.state != State.gps_overide and self.state != State.idle and self.state != State.manual_position and self.state != State.manual_velocity and self.state != State.tracking_override:
             self.state = new_state
 
         if self.state == State.calibrating:
@@ -478,12 +517,18 @@ class Statemachine():
         elif self.state == State.idle:
             vel_mux = 0
             gps_mux = 0 #Not relveant
-        elif self.state == State.tracking:
+        elif self.state == State.tracking or self.state == State.tracking_override:
             vel_mux = 2
             gps_mux = 0
-        elif self.state == State.gps or self.state == State.gps_overide:
+        elif self.state == State.gps or self.state == State.gps_override:
             vel_mux = 2
             gps_mux = 1
+        elif self.state == State.manual_position:
+            vel_mux = 2
+            gps_mux = 2
+        elif self.state == State.manual_velocity:
+            vel_mux = 3
+            gps_mux = 0 #Not relevant
         else:
             self.logger.critical("Unknown state, panic!")
             self.state_lock.release()

@@ -7,11 +7,9 @@ class CommTest(unittest.TestCase):
 
     def setUp(self):
         self.datalength = 200
-        port = 2830
-        ip = "127.0.0.1"
 
-        self.client = Udpclient(port, ip)
-        self.comm = Communication(port, ip)
+        self.client = Udpclient()
+        self.comm = Communication()
 
     def tearDown(self):
         self.comm.shutdown()
