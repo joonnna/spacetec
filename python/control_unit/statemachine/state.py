@@ -57,8 +57,6 @@ class Statemachine():
 
         #self.calibrate()
         self.set_state(Override.idle)
-       # self.start_gps_checker_thread()
-        self.reset_abspos(az, el)
         self.start_pos_thread()
 
     def initrcomps(self, testing):
@@ -361,13 +359,14 @@ class Statemachine():
 
         self.sig_limit = config["sig_lim"]
         self.sig_re_enter_limit = config["sig_reenter_lim"]
-        """
+
         self.max_velocity = config["max_velocity"]
         self.min_velocity = config["min_velocity"]
 
         self.calibrate_max_velocity = config["calibrate_max_velocity"]
         self.calibrate_min_velocity = config["calibrate_min_velocity"]
 
+        """
         self.velocity_igain = config["velocity_igain"]
         self.velocity_pgain = config["velocity_pgain"]
 
@@ -464,9 +463,6 @@ class Statemachine():
         self.calibrate_az()
 
         self.calibrate_el()
-
-        #TODO Want zero pos in the middle right?
-        self.reset_abspos(0.0, 0.0)
 
         self.logger.info("Finished calibrating")
 
@@ -585,13 +581,11 @@ class Statemachine():
 
         self.pos_thread.stop()
         self.comm_thread.stop()
-        #self.gps_thread.stop()
 
         self.comm_thread.join()
         self.logger.info("Shutdown comm thread")
         self.pos_thread.join()
         self.logger.info("Shutdown pos thread")
-        #self.gps_thread.join()
 
         shutdown_hal()
         self.sd.stop()
@@ -627,10 +621,6 @@ class Statemachine():
                 if not self.comm_thread.is_alive():
                     self.logger.info("comm thread died, restarting")
                     self.start_comm_thread()
-
-                #if not self.gps_checker_thread.is_alive():
-                #    self.logger.info("Gps checker thread died, restarting")
-                #    self.start_gps_checker_thread()
 
                 #If executed as secondary thread instead of main thread
                 if exit_event:

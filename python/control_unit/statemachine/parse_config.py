@@ -12,17 +12,12 @@ def read_config():
     dict["calibrate_velocity_igain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_IGAIN")
     dict["calibrate_velocity_pgain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_PGAIN")
 
-    dict["calibrate_max_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
-    dict["calibrate_min_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
-
     dict["pos_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
     dict["pos_igain"] = config.getfloat("POS_PID", "POS_PID_IGAIN")
 
     dict["velocity_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
     dict["velocity_igain"] = config.getfloat("VEL_PID", "VEL_PID_IGAIN")
 
-    dict["max_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
-    dict["min_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
 
     dict["callibrate_velocity_igain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_IGAIN")
     dict["calibrate_velocity_pgain"] = config.getfloat("CALIBRATE_VALUES", "VEL_PID_PGAIN")
@@ -30,6 +25,12 @@ def read_config():
     dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
     dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
     """
+
+    dict["calibrate_max_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
+    dict["calibrate_min_velocity"] = config.getfloat("CALIBRATE_VALUES", "VEL_LIM_MAX")
+
+    dict["max_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
+    dict["min_velocity"] = config.getfloat("VEL_LIMS", "VEL_LIM_MAX")
 
     dict["pos_timeout"] = config.getfloat("THREAD_TIMEOUTS", "POS_THREAD")
     dict["check_threads_timeout"] = config.getfloat("THREAD_TIMEOUTS", "CHECK_THREADS")
