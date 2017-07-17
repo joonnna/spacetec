@@ -45,6 +45,9 @@ class Udpclient():
         lines = data.split("\n")
 
         while True:
+            if self._should_stop(cleanup_event):
+                self.logger.info("Exiting udp client")
+                return
             for line in lines:
                 if self._should_stop(cleanup_event):
                     self.logger.info("Exiting udp client")

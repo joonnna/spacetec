@@ -6,7 +6,7 @@ newinst muxn vmuxn.1 pincount=3
 loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
-loadrt bldc cfg=nT,nT #Probably wrong config
+loadrt bldc cfg=q,q #Probably wrong config
 loadrt scale count=4
 loadrt sigcheck
 loadrt steptrack count=2
@@ -66,6 +66,10 @@ newpin motor-feedback motor-feedback.az_pos float in
 newpin motor-feedback motor-feedback.el_pos float in
 newpin motor-feedback motor-feedback.reset_el bit out
 newpin motor-feedback motor-feedback.reset_az bit out
+newpin motor-feedback motor-feedback.az_init_start bit out
+newpin motor-feedback motor-feedback.az_init_done bit in
+newpin motor-feedback motor-feedback.el_init_start bit out
+newpin motor-feedback motor-feedback.el_init_done bit in
 ready motor-feedback
 
 newcomp check-step
@@ -86,11 +90,10 @@ newpin test-feedback test-feedback.az float out
 newpin test-feedback test-feedback.el float out
 ready test-feedback
 
-newcomp test-set-angle 
-newpin test-set-angle test-set-angle.az_angle float io
-newpin test-set-angle test-set-angle.el_angle float io
-ready test-set-angle
-
+newcomp set-angle 
+newpin set-angle set-angle.az_angle float io
+newpin set-angle set-angle.el_angle float io
+ready set-angle
 
 #setp test-feedback.stop_az True
 #setp test-feedback.stop_el True
@@ -99,6 +102,12 @@ net az_end test-feedback.stop_az motor-feedback.zero_az
 net el_end test-feedback.stop_el motor-feedback.zero_el
 net az_pos test-feedback.az motor-feedback.az_pos
 net el_pos test-feedback.el motor-feedback.el_pos
+
+net init-bldc.0 motor-feedback.az_init_start bldc.0.init
+net init-bldc.1 motor-feedback.el_init_start bldc.1.init
+
+net init-bldc-done.0 bldc.0.init-done motor-feedback.az_init_done
+net init-bldc-done.1 bldc.1.init-done motor-feedback.el_init_done 
 
 setp ppid.0.enable true
 setp ppid.1.enable true
@@ -111,7 +120,9 @@ setp vpid.1.enable true
 ######################################
 
 # parameter values
-setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_LIMIT
+setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.re-enter-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
@@ -128,11 +139,11 @@ setp vlim.0.min [VEL_LIMS]VEL_LIM_MIN
 setp plim.0.max [POS_LIMS]POS_LIM_MAX
 setp plim.0.min [POS_LIMS]POS_LIM_MIN
 
-setp vpid.0.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.0.Igain [VEL_PID]VEL_PID_IGAIN
+setp vpid.0.Pgain [AZ_VEL_PID]VEL_PID_PGAIN
+setp vpid.0.Igain [AZ_VEL_PID]VEL_PID_IGAIN
 
-setp ppid.0.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.0.Igain [POS_PID]POS_PID_PGAIN
+setp ppid.0.Pgain [AZ_POS_PID]POS_PID_PGAIN
+setp ppid.0.Igain [AZ_POS_PID]POS_PID_PGAIN
 
 setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
 setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
@@ -140,14 +151,11 @@ setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
 setp plim.1.max [POS_LIMS]POS_LIM_MAX
 setp plim.1.min [POS_LIMS]POS_LIM_MIN
 
-setp vpid.1.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.1.Igain [VEL_PID]VEL_PID_IGAIN
+setp vpid.1.Pgain [EL_VEL_PID]VEL_PID_PGAIN
+setp vpid.1.Igain [EL_VEL_PID]VEL_PID_IGAIN
 
-setp ppid.1.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.1.Igain [POS_PID]POS_PID_PGAIN
-
-setp near.2.difference [GPS_LIMITS]AZ_LIM
-setp near.3.difference [GPS_LIMITS]EL_LIM
+setp ppid.1.Pgain [EL_POS_PID]POS_PID_PGAIN
+setp ppid.1.Igain [EL_POS_PID]POS_PID_PGAIN
 
 net max_az.0 pos-comps.max_az plim.0.max
 net min_az.0 pos-comps.min_az plim.0.min
@@ -158,12 +166,11 @@ net min_el.1 pos-comps.min_el plim.1.min
 net vel-max vel-comps.max_vel vlim.0.max vlim.1.max
 net vel-min vel-comps.min_vel vlim.0.min vlim.1.min
 
-setp near.2.difference [GPS_LIMITS]AZ_LIM
-setp near.3.difference [GPS_LIMITS]EL_LIM
+setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
+setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
 
-net test_angle.0 near.2.difference test-set-angle.az_angle
-net test_angle.1 near.3.difference test-set-angle.el_angle
-
+net test_angle.0 near.2.difference set-angle.az_angle
+net test_angle.1 near.3.difference set-angle.el_angle
 
 # Net's for 1st set
 

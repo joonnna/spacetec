@@ -9,7 +9,7 @@ def start(path):
     comm = Communication()
     comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_gps_pos)
 
-    sm.run(comm_thread)
+    sm.run(new_comm, comm_thread)
 
 project_folder = "/home/machinekit/machinekit/spacetec/"
 

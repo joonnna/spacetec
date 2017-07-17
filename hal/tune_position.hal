@@ -1,7 +1,13 @@
-newthread fpthread fp 10000000
+newthread fpthread fp 500000
 loadrt limit1 names=plim.0,plim.1
 loadrt pid names=ppid.0,ppid.1
-loadrt bldc cfg=nT,nT #Probably wrong config
+
+loadrt bldc cfg=q,q
+# må ha 6 scales mellom bldc og pwmgen
+# og 4 scales mellom encodere ogsånt
+loadrt scale count=6
+
+newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo num_stepgens=0"
 
 setp ppid.0.enable true
 setp ppid.1.enable true

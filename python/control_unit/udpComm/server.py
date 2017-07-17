@@ -12,6 +12,9 @@ class Communication():
         #print socket.gethostname()
         #print socket.gethostbyname(socket.gethostname())
 
+        logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
+        self.logger = logging.getLogger("udpserver")
+
         config = read_comm_config()
         ip = config["ip"]
         port = config["port"]
@@ -20,8 +23,12 @@ class Communication():
         self._loc_long   = config["long"]
         self._loc_height = config["height"]
 
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.bind((ip, port))
+        try:
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._socket.bind((ip, port))
+        except socket.error, msg:
+            self.logger.Error("Failed to bind/create socket, %s" % (msg))
+            return
 
         self._long_start     = 171
         self._long_end       = 180
@@ -30,18 +37,18 @@ class Communication():
         self._height_start   = 192
         self._height_end     = 198
 
-        logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
-        self.logger = logging.getLogger("udpserver")
-
         self.logger.info("Inited udp server")
-
 
     def _receive_data(self):
         data, addr = self._socket.recvfrom(1024)
 
-        longtitude = float(data[self._long_start:self._long_end])
-        latitude = float(data[self._lat_start:self._lat_end])
-        height = float(data[self._height_start:self._height_end])
+        try:
+            longtitude = float(data[self._long_start:self._long_end])
+            latitude = float(data[self._lat_start:self._lat_end])
+            height = float(data[self._height_start:self._height_end])
+        except ValueError:
+            self.logger.error("Can't convert gps data to floats, abort?")
+            return None
 
         return (longtitude, latitude, height)
 
@@ -128,9 +135,13 @@ class Communication():
         #try:
         #    while True:
         data = self._receive_data()
+        if data == None:
+            return
         pos = self._calc_pos(data)
         cb(pos)
         #except KeyboardInterrupt:
         #    pass
 
         #self.shutdown()
+def new_comm():
+    return Communication()

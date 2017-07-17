@@ -33,11 +33,11 @@ class CommTest(unittest.TestCase):
 
 
     #TODO Don't know expected output...
-    def test_calc_pos(self):
-        pass
+   # def test_calc_pos(self):
+   #     pass
 
-    def test_gps_input(self):
-        self.comm.get_local_gps_pos()
+ #   def test_gps_input(self):
+  #      self.comm.get_local_gps_pos()
 
 
 def extract_pos(data):

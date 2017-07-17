@@ -4,14 +4,22 @@ pin out float out0;
 pin out float out1;
 pin out bit out2;
 param rw float sig_limit;
+param rw float re_enter_limit;
+param rw float enter_limit;
 param rw bit axis;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
 if (in > sig_limit)
+{
+    sig_limit = enter_limit;
     out2 = true;
+}
 else
+{
+    sig_limit = re_enter_limit;
     out2 = false;
+}
 
 if (axis)
 {

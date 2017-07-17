@@ -1,8 +1,9 @@
-newthread fpthread fp 1000000
-loadrt limit2 names=vlim.0,vlim.1
+newthread fpthread fp 250000
+loadrt limit2 names=vlim.0,vlim.1,limit2.0
 loadrt pid names=vpid.0,vpid.1
 
 loadrt hostmot2
+
 
 newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo num_stepgens=0"
 
@@ -27,7 +28,7 @@ setp vpid.1.enable true
 #Set limits
 
 #System flow
-#net vlim-to-vpid.0 vlim.0.out vpid.0.command
+net vlim-to-vpid.0 vlim.0.out vpid.0.command
 
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.0.feedback
@@ -40,13 +41,16 @@ setp vpid.1.enable true
 #Need motor feedback (velocity/pos)
 #net enc-to-vpid enc.. vpid.1.feedback
 
-setp vlim.0.max 1.0
-setp vlim.0.min 0.0
-setp vlim.0.maxv 1.0
+#setp vlim.0.max 100.0
+#setp vlim.0.min 0.0
+#setp vlim.0.maxv 1.0
 
 setp vpid.0.Igain 0.0
 setp vpid.0.Pgain 0.0
 
+setp limit2.0.max 1.0
+setp limit2.0.maxv 1.0
+setp limit2.0.min -1.0
 
 setp vlim.1.max 1.0
 setp vlim.1.min 0.0
@@ -55,6 +59,7 @@ setp vlim.1.maxv 1.0
 setp vpid.1.Igain 0.0
 setp vpid.1.Pgain 0.0
 
+setp vlim.0.in 0.1
 
 
 
@@ -95,11 +100,14 @@ net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcoun
 
 # encoder velocity to velocity pid
 net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.position => vpid.0.feedback
-net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
+#net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
 
 # vpid to bldc
-net vpid-to-bldc.0 vpid.0.output bldc.0.value
+#net vpid-to-bldc.0 vpid.0.output bldc.0.value
 net vpid-to-bldc.1 vpid.1.output bldc.1.value
+
+net vpid-to-lim vpid.0.output limit2.0.in
+net lim-to-bldc limit2.0.out bldc.0.value
 
 # SPI
 
@@ -166,7 +174,7 @@ addf scale.2.funct fpthread
 addf scale.3.funct fpthread
 addf scale.4.funct fpthread
 addf scale.5.funct fpthread
-
+addf limit2.0 fpthread
 
 
 # functions #1
@@ -177,7 +185,7 @@ addf vlim.1 fpthread
 addf vpid.1.do-pid-calcs fpthread
 
 start
-#loadusr halscope
+loadusr halscope
 loadusr halmeter
 
 # Haltalk

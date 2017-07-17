@@ -37,8 +37,6 @@ class BaseTest(unittest.TestCase):
         self.update_timeout = 5.0
 
         start_hal("/home/machinekit/machinekit/spacetec/hal/test_system.hal")
-        self.port = 5530
-        self.ip = "192.168.5.4"
 
         self.test_client = Udpclient()
 
@@ -56,7 +54,7 @@ class BaseTest(unittest.TestCase):
 
         self.init()
 
-        thread.start_new_thread(self.sm.run, (self.thread1, self.exit_event, self.cleanup_event))
+        thread.start_new_thread(self.sm.run, (new_comm, self.thread1, self.exit_event, self.cleanup_event))
 
     def start_client(self, data=None):
         thread.start_new_thread(self.test_client.run, (data, self.client_exit_event))
@@ -69,21 +67,20 @@ class BaseTest(unittest.TestCase):
             self.test_client.shutdown()
             self.client_exit_event.wait()
 
-
     def change_to_all_states(self, state):
         self.sm.set_state(State.gps)
         self.assertEqual(self.sm.get_state(), state)
 
-        self.sm.set_state(State.gps_overide)
+        self.sm.set_state(Override.gps)
         self.assertEqual(self.sm.get_state(), state)
 
         self.sm.set_state(State.tracking)
         self.assertEqual(self.sm.get_state(), state)
 
-        self.sm.set_state(State.calibrating)
+        self.sm.set_state(Override.calibrating)
         self.assertEqual(self.sm.get_state(), state)
 
-        self.sm.set_state(State.idle)
+        self.sm.set_state(Override.idle)
         self.assertEqual(self.sm.get_state(), state)
 
 

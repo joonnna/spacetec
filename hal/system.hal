@@ -1,4 +1,5 @@
-newthread fast_thread fp [HAL_THRAD_PERIODS]FAST_THREAD slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
+newthread fast_thread fp [HAL_THREAD_PERIODS]FAST_THREAD 
+newthread slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
 
 newinst muxn muxn.0 pincount=3
 newinst muxn muxn.1 pincount=3
@@ -35,10 +36,8 @@ net scale_5-to-pwmgen_06 scale.9.out => hm2_de0n.0.pwmgen.05.value
 net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.0.in
 net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.2.in
 
-
-net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcount => bldc.0.rawcounts
-net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcount => bldc.1.rawcounts
-
+net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcounts
+net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
 net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
 net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
@@ -50,8 +49,16 @@ setp hm2_de0n.0.pwmgen.03.enable TRUE
 setp hm2_de0n.0.pwmgen.04.enable TRUE
 setp hm2_de0n.0.pwmgen.05.enable TRUE
 
-
 setp hm2_de0n.0.pwmgen.pwm_frequency 40000
+
+# ONLY FOR TESTBED
+# set motor driver enable high
+setp hm2_de0n.0.gpio.042.out TRUE
+setp hm2_de0n.0.gpio.043.out TRUE
+setp hm2_de0n.0.gpio.044.out TRUE
+setp hm2_de0n.0.gpio.042.is_output TRUE
+setp hm2_de0n.0.gpio.043.is_output TRUE
+setp hm2_de0n.0.gpio.044.is_output TRUE
 
 # set bldc scale and poles
 setp bldc.0.scale 2048
@@ -59,6 +66,9 @@ setp bldc.0.poles 8
 
 setp bldc.1.scale 2048
 setp bldc.1.poles 8
+
+setp hm2_de0n.0.encoder.00.scale 11.37
+#setp hm2_de0n.0.encoder.01.scale 4096/360*10
 
 # set bldc to pwmgen scale gain
 setp scale.4.gain 0.5
@@ -82,6 +92,15 @@ newcomp step
 newpin step step.track bit in
 newpin step step.manual s32 in
 ready step
+
+newcomp set-angle
+newpin set-angle set-angle.az_angle float io
+newpin set-angle set-angle.el_angle float io
+ready set-angle
+
+newcomp rssi-reader
+newpin rssi-reader rssi-reader.value float out
+ready rssi-reader
 
 newcomp velmux
 newpin velmux velmux.az_sel s32 out
@@ -125,6 +144,10 @@ newpin motor-feedback motor-feedback.az_pos float in
 newpin motor-feedback motor-feedback.el_pos float in
 newpin motor-feedback motor-feedback.reset_el bit out
 newpin motor-feedback motor-feedback.reset_az bit out
+newpin motor-feedback motor-feedback.az_init_start bit out
+newpin motor-feedback motor-feedback.az_init_done bit in
+newpin motor-feedback motor-feedback.el_init_start bit out
+newpin motor-feedback motor-feedback.el_init_done bit in
 ready motor-feedback
 
 setp ppid.0.enable true
@@ -137,8 +160,22 @@ setp vpid.1.enable true
 #1st set of components and connections
 ######################################
 
+net init-bldc-done.0 bldc.0.init-done motor-feedback.az_init_done
+net init-bldc-done.1 bldc.1.init-done motor-feedback.el_init_done
+
+# Assume we start in GPS mode
+setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIM
+setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIM
+
+# Angle threshold between gps/tracking
+net az_angle set-angle.az_angle near.2.difference
+net el_angle set-angle.el_angle near.3.difference
+
+
 # parameter values
-setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_LIMIT
+setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.re-enter-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
@@ -154,11 +191,11 @@ setp vlim.0.min [VEL_LIMS]VEL_LIM_MIN
 setp plim.0.max [POS_LIMS]POS_LIM_MAX
 setp plim.0.min [POS_LIMS]POS_LIM_MIN
 
-setp vpid.0.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.0.Igain [VEL_PID]VEL_PID_IGAIN
+setp vpid.0.Pgain [AZ_VEL_PID]VEL_PID_PGAIN
+setp vpid.0.Igain [AZ_VEL_PID]VEL_PID_IGAIN
 
-setp ppid.0.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.0.Igain [POS_PID]POS_PID_PGAIN
+setp ppid.0.Pgain [EL_POS_PID]POS_PID_PGAIN
+setp ppid.0.Igain [EL_POS_PID]POS_PID_PGAIN
 
 setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
 setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
@@ -166,11 +203,11 @@ setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
 setp plim.1.max [POS_LIMS]POS_LIM_MAX
 setp plim.1.min [POS_LIMS]POS_LIM_MIN
 
-setp vpid.1.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.1.Igain [VEL_PID]VEL_PID_IGAIN
+setp vpid.1.Pgain [EL_VEL_PID]VEL_PID_PGAIN
+setp vpid.1.Igain [EL_VEL_PID]VEL_PID_IGAIN
 
-setp ppid.1.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.1.Igain [POS_PID]POS_PID_PGAIN
+setp ppid.1.Pgain [EL_POS_PID]POS_PID_PGAIN
+setp ppid.1.Igain [EL_POS_PID]POS_PID_PGAIN
 
 setp near.2.difference [GPS_LIMITS]AZ_LIM
 setp near.3.difference [GPS_LIMITS]EL_LIM
@@ -205,6 +242,8 @@ net vpid-to-bldc-lim.0 vpid.0.output bldc-lim.0.in
 net lim-to-bldc.0 bldc-lim.0.out bldc.0.value
 
 net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1
+
+net rssi-reader-to-filter rssi-reader.value lowpass.0.in
 
 net filter-to-sigcheck lowpass.0.out sigcheck.0.in
 
@@ -279,7 +318,6 @@ net vinput.1 velmux.el_out vmuxn.1.in1
 
 net abspos.1 scale.2.out abspos.el_in scale.3.in
 net reset.1 abspos.el_reset scale.2.offset
-
 
 ##########################
 #Single components

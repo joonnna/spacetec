@@ -21,13 +21,17 @@ class ManualTest(BaseTest):
         self.sm.halrcomps["step"].getpin("manual").set(1)
         time.sleep(self.update_timeout)
 
-        self.assertEqual(self.sm.get_state(), State.manual_position)
+        self.assertEqual(self.sm.get_state(), Manual.position)
 
         self.sm.halrcomps["step"].getpin("manual").set(2)
         time.sleep(self.update_timeout)
 
-        self.assertEqual(self.sm.get_state(), State.manual_velocity)
+        self.assertEqual(self.sm.get_state(), Manual.velocity)
 
+        self.sm.halrcomps["step"].getpin("manual").set(3)
+        time.sleep(self.update_timeout)
+
+        self.assertEqual(self.sm.get_state(), Manual.tracking)
 
     def test_exit_manual_mode(self):
         self.start_client()
@@ -35,14 +39,14 @@ class ManualTest(BaseTest):
         self.sm.halrcomps["step"].getpin("manual").set(1)
         time.sleep(self.update_timeout)
 
-        self.assertEqual(self.sm.get_state(), State.manual_position)
+        self.assertEqual(self.sm.get_state(), Manual.position)
 
         self.sm.halrcomps["step"].getpin("manual").set(0)
         time.sleep(self.update_timeout)
 
-        self.assertNotEqual(self.sm.get_state(), State.manual_position)
-        self.assertNotEqual(self.sm.get_state(), State.manual_velocity)
-        self.assertNotEqual(self.sm.get_state(), State.manual_tracking)
+        self.assertNotEqual(self.sm.get_state(), Manual.position)
+        self.assertNotEqual(self.sm.get_state(), Manual.velocity)
+        self.assertNotEqual(self.sm.get_state(), Manual.tracking)
 
     def test_stay_manual_mode(self):
         self.start_client()
@@ -50,12 +54,11 @@ class ManualTest(BaseTest):
         self.sm.halrcomps["step"].getpin("manual").set(1)
         time.sleep(self.update_timeout)
 
-        self.assertEqual(self.sm.get_state(), State.manul_position)
+        self.assertEqual(self.sm.get_state(), Manual.position)
 
-        self.change_to_all_states(State.manual_position)
+        self.change_to_all_states(Manual.position)
 
-        self.assertEqual(self.sm.get_state(), State.manual_position)
-
+        self.assertEqual(self.sm.get_state(), Manual.position)
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,7 +5,7 @@ def read_config():
     config.read("/home/machinekit/machinekit/spacetec/configs/test_config.ini")
 
     dict = {}
-
+    """
     dict["calibrate_pos_igain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_IGAIN")
     dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
 
@@ -29,14 +29,15 @@ def read_config():
 
     dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
     dict["calibrate_pos_pgain"] = config.getfloat("CALIBRATE_VALUES", "POS_PID_PGAIN")
+    """
 
     dict["pos_timeout"] = config.getfloat("THREAD_TIMEOUTS", "POS_THREAD")
     dict["check_threads_timeout"] = config.getfloat("THREAD_TIMEOUTS", "CHECK_THREADS")
-    dict["gps_check_timeout"] = config.getfloat("THREAD_TIMEOUTS", "GPS_CHECKER_THREAD")
-    dict["gps_timeout"] = config.getfloat("THREAD_TIMEOUTS", "GPS_THREAD")
 
     dict["az_lim"] = config.getfloat("GPS_LIMITS", "AZ_LIM")
     dict["el_lim"] = config.getfloat("GPS_LIMITS", "EL_LIM")
+    dict["az_re_enter_limit"] = config.getfloat("GPS_LIMITS", "AZ_RE_ENTER_LIMIT")
+    dict["el_re_enter_limit"] = config.getfloat("GPS_LIMITS", "EL_RE_ENTER_LIMIT")
 
     dict["az_range"] = config.getfloat("AXIS_RANGE", "AZ_RANGE")
     dict["el_range"] = config.getfloat("AXIS_RANGE", "EL_RANGE")
@@ -52,5 +53,6 @@ def read_config():
     dict["overide_gps_height"] = config.getfloat("OVERIDE_GPS_LIMS", "HEIGHT_LIM")
 
     dict["sig_lim"] = config.getfloat("SIGNAL", "SIGNAL_LIMIT")
+    dict["sig_reenter_lim"] = config.getfloat("SIGNAL", "SIGNAL_REENTER_LIMIT")
 
     return dict
