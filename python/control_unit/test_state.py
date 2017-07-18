@@ -39,6 +39,7 @@ class StateTest(BaseTest):
 
         self.assertNotEqual(self.sm.get_state(), Override.idle)
 
+
     def test_gps_overide(self):
         self.start_client(self.low_height)
 
@@ -51,13 +52,13 @@ class StateTest(BaseTest):
         self.sm.set_state(Override.stop)
         self.assertNotEqual(self.sm.get_state(), Override.gps)
 
+
     def test_high_height_no_gps_overide(self):
         self.start_client(self.high_height)
 
         time.sleep(self.update_timeout)
 
         self.assertNotEqual(self.sm.get_state(), Override.gps)
-
 
 if __name__ == '__main__':
     unittest.main()

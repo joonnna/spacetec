@@ -1,11 +1,12 @@
-newthread fpthread fp 250000
+newthread fpthread fp 1000000
+#newthread fast_thread fp 500000
 loadrt limit1 count=2
 loadrt limit2 count=2
 loadrt pid names=ppid.0,ppid.1
 
-#########################
-BLDC/HOSTMOT CONFIG START
-#########################
+###########################
+#BLDC/HOSTMOT CONFIG START#
+###########################
 
 loadrt hostmot2
 
@@ -87,14 +88,15 @@ setp scale.4.offset 0.5
 setp scale.5.offset 0.5
 
 
-#######################
-BLDC/HOSTMOT CONFIG END
-#######################
+#########################
+#BLDC/HOSTMOT CONFIG END#
+#########################
 
-################
-LIM VALUES START
-################
+################3#
+#LIM VALUES START#
+##################
 
+net ppid-to-bldc ppid.0.output bldc.0.value 
 net limit1-to-ppid.0 limit1.0.out ppid.0.command
 net limit1-to-ppid.1 limit1.1.out ppid.1.command
 
@@ -112,13 +114,13 @@ setp limit2.1.min -1.0
 #setp limit1.1.max 1.0
 #setp limit1.1.min 0.0
 
-##############
-LIM VALUES END
-##############
+################
+#LIM VALUES END#
+################
 
-################
-LIM VALUES START
-################
+##################
+#PID VALUES START#
+##################
 setp ppid.0.enable true
 setp ppid.1.enable true
 
@@ -133,12 +135,12 @@ setp ppid.1.Dgain 0
 #net ppid-to-bldc.0 ppid.0.output bldc.0.value
 #net ppid-to-bldc.1 ppid.1.output bldc.1.value
 
-net ppid-to-lim ppid.0.output limit2.0.in
-net lim-to-bldc limit2.0.out bldc.0.value
+#net ppid-to-lim ppid.0.output limit2.0.in
+#net lim-to-bldc limit2.0.out bldc.0.value
 
-##############
-PID VALUES END
-##############
+################
+#PID VALUES END#
+################
 
 addf hm2_de0n.0.read fpthread
 addf hm2_de0n.0.write fpthread

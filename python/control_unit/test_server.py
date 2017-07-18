@@ -1,36 +1,42 @@
 from udpComm.server import *
 from udpComm.client import *
 import thread
+import threading
 import unittest
 
 class CommTest(unittest.TestCase):
 
     def setUp(self):
-        self.datalength = 200
+        self.datalength = 199
+
+        self.exit_event = threading.Event()
 
         self.client = Udpclient()
         self.comm = Communication()
 
     def tearDown(self):
+        self.client.shutdown()
+        self.exit_event.wait()
         self.comm.shutdown()
 
     def test_recv_ptu_data(self):
-        ptudata = open("ptudata", "r")
+        path = "/home/machinekit/machinekit/spacetec/data_files/low_height"
+        ptudata = open(path, "r")
         file_data = ptudata.read()
+        ptudata.close()
         lines = file_data.split("\n")
 
-        data = lines[10]
+        data = lines[0]
         self.assertEqual(len(data), self.datalength)
 
         pos = extract_pos(data)
 
-        self.thread = thread.start_new_thread(self.client.run, (data,))
+        self.thread = thread.start_new_thread(self.client.run, (path, self.exit_event))
 
         received_pos = self.comm._receive_data()
 
         for idx, var in enumerate(pos):
             self.assertEqual(var, received_pos[idx])
-
 
     #TODO Don't know expected output...
    # def test_calc_pos(self):

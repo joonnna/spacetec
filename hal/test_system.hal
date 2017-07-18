@@ -15,9 +15,9 @@ loadrt near count=4
 loadrt and2 names=angle_and,state_and
 
 
-#######################
-REMOTE COMPONENTS START
-#######################
+#########################
+#REMOTE COMPONENTS START#
+#########################
 
 newcomp step
 newpin step step.track bit in
@@ -77,13 +77,13 @@ newpin set-angle set-angle.az_angle float io
 newpin set-angle set-angle.el_angle float io
 ready set-angle
 
-#####################
-REMOTE COMPONENTS END
-#####################
+#######################
+#REMOTE COMPONENTS END#
+#######################
 
-################
-TEST LOGIC START
-################
+##################
+#TEST LOGIC START#
+##################
 
 loadrt rssi_test
 loadrt test_encoder
@@ -132,20 +132,20 @@ net enc-to-abs.0 test-encoder.0.out0 scale.0.in
 net enc-to-abs.1 test-encoder.0.out1 scale.2.in
 
 
-##############
-TEST LOGIC END
-##############
+################
+#TEST LOGIC END#
+################
 
 
 
-#############################
-ANGLE/SIGNAL THRESHOLDS START
-#############################
+###############################
+#ANGLE/SIGNAL THRESHOLDS START#
+###############################
 
 setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
 setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
 
-net az_angle set-angle.az_angle near.2.difference 
+net az_angle set-angle.az_angle near.2.difference
 net el_angle set-angle.el_angle near.3.difference
 
 net angle-to-state angle_and.out state_and.in0
@@ -158,14 +158,13 @@ setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
-###########################
-ANGLE/SIGNAL THRESHOLDS END
-###########################
+#############################
+#ANGLE/SIGNAL THRESHOLDS END#
+#############################
 
-
-####################
-LIM/PID VALUES START
-####################
+######################
+#LIM/PID VALUES START#
+######################
 
 setp ppid.0.enable true
 setp ppid.1.enable true
@@ -212,13 +211,13 @@ net min_el.1 pos-comps.min_el plim.1.min
 net vel-max vel-comps.max_vel vlim.0.max vlim.1.max
 net vel-min vel-comps.min_vel vlim.0.min vlim.1.min
 
-##################
-LIM/PID VALUES END
-##################
+####################
+#LIM/PID VALUES END#
+####################
 
-#################
-SYSTEM FLOW START
-#################
+###################
+#SYSTEM FLOW START#
+###################
 
 net mux-to-plim.0 muxn.0.out plim.0.in
 net mux-to-plim.1 muxn.1.out plim.1.in
@@ -259,7 +258,7 @@ net init-bldc.0 motor-feedback.az_init_start bldc.0.init
 net init-bldc.1 motor-feedback.el_init_start bldc.1.init
 
 net init-bldc-done.0 bldc.0.init-done motor-feedback.az_init_done
-net init-bldc-done.1 bldc.1.init-done motor-feedback.el_init_done 
+net init-bldc-done.1 bldc.1.init-done motor-feedback.el_init_done
 
 net sel.0 gpsmux.az_sel muxn.0.sel
 net sel.1 gpsmux.el_sel muxn.1.sel
@@ -280,9 +279,9 @@ net reset.0 abspos.az_reset scale.0.offset
 net reset.1 abspos.el_reset scale.2.offset
 
 
-###############
-SYSTEM FLOW END
-###############
+#################
+#SYSTEM FLOW END#
+#################
 
 setp scale.0.gain 1
 setp scale.1.gain 1
@@ -294,9 +293,9 @@ setp scale.3.offset [COMPASS_OFFSET]EL_OFFSET
 
 setp lowpass.0.gain 1
 
-###############
-FUNCTIONS START
-###############
+#################
+#FUNCTIONS START#
+#################
 
 addf test-encoder.0 fpthread
 addf rssi-test.0 fpthread
@@ -336,9 +335,9 @@ addf vpid.1.do-pid-calcs fpthread
 addf bldc.1 fpthread
 
 
-#############
-FUNCTIONS END
-#############
+###############
+#FUNCTIONS END#
+###############
 
 start
 

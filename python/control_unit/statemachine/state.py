@@ -7,6 +7,7 @@ from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
 from parse_config import read_config
 from state_enum import *
+import threading
 
 
 class Statemachine():
@@ -33,6 +34,8 @@ class Statemachine():
         logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
         self.logger = logging.getLogger("state")
 
+        self.logger.info("Started statemachine init!")
+
         pos = self.read_init_pos()
 
         az = pos[0]
@@ -52,10 +55,11 @@ class Statemachine():
         self.initrcomps(testing)
         self._search_and_bind()
 
+        self.logger.info("Waiting for bldc init")
         self.wait_for_init()
+        self.logger.info("Bldc init done!")
 
-
-        #self.calibrate()
+        self.calibrate()
         self.set_state(Override.idle)
         self.start_pos_thread()
 
@@ -125,14 +129,14 @@ class Statemachine():
         gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
         gps_angle_check.no_create = True
 
-        self.halrcomps[gps_angle_check.name] = gps_angle_check
+        #self.halrcomps[gps_angle_check.name] = gps_angle_check
         self.halrcomps[motor_feedback.name] = motor_feedback
-        self.halrcomps[pos_comps.name] = pos_comps
-        self.halrcomps[vel_comps.name] = vel_comps
-        self.halrcomps[tracking.name] = tracking
-        self.halrcomps[gps_mux.name] = gps_mux
-        self.halrcomps[vel_mux.name] = vel_mux
-        self.halrcomps[abspos.name] = abspos
+        #self.halrcomps[pos_comps.name] = pos_comps
+        #self.halrcomps[vel_comps.name] = vel_comps
+        #self.halrcomps[tracking.name] = tracking
+        #self.halrcomps[gps_mux.name] = gps_mux
+        #self.halrcomps[vel_mux.name] = vel_mux
+        #self.halrcomps[abspos.name] = abspos
 
         if testing:
             self.logger.info("Creating test components")
@@ -168,11 +172,12 @@ class Statemachine():
             self.halrcomps[bldc0.name] = bldc0
             self.halrcomps[bldc1.name] = bldc1
 
-    def az_init_done(self):
+    def az_init_done(self, val):
+        self.logger.debug("INIT DONE BITHCESEESS")
         self.halrcomps["motor-feedback"].getpin("az_init_start").set(False)
         self.az_init_event.set()
 
-    def el_init_done(self):
+    def el_init_done(self, val):
         self.halrcomps["motor-feedback"].getpin("el_init_start").set(False)
         self.el_init_event.set()
 
@@ -189,19 +194,24 @@ class Statemachine():
             self.zero_el_event.clear()
 
     def wait_for_init(self):
-        az = self.halrcomps["motor-feedback"].getpin("az_init_start")
-        az.set(True)
-        self.az_init_event.wait()
-        az.set(False)
+        self.halrcomps["motor-feedback"].getpin("az_init_start").set(True)
+        #while self.halrcomps["motor-feedback"].getpin("az_init_start").get():
+        #    pass
+            #self.logger.debug(self.halrcomps["motor-feedback"].getpin("az_init_start").get())
+        #while self.halrcomps["motor-feedback"].getpin("az_init_start").get():
+        #    pass
 
-        el = self.halrcomps["motor-feedback"].getpin("el_init_start")
-        el.set(True)
-        self.el_init_event.wait()
-        el.set(False)
+
+        self.az_init_event.wait()
+        #time.sleep(10)
+        #self.halrcomps["motor-feedback"].getpin("el_init_start").set(True)
+        #self.el_init_event.wait()
 
     def wait_for_zero_az(self):
+        self.logger.info("Waiting for zero velocity")
         self.zero_az_event.wait()
         self.zero_az_event.clear()
+        self.logger.info("Got zero velocity!")
         return self.halrcomps["motor-feedback"].getpin("az_pos").get()
 
     def wait_for_zero_el(self):
@@ -227,9 +237,11 @@ class Statemachine():
         for name, rcomp in self.halrcomps.iteritems():
             self.sd.register(rcomp)
 
+        self.logger.info("Started service discovery")
         self.sd.start()
 
         for name, rcomp in self.halrcomps.iteritems():
+            self.logger.debug("bound : %s" % (name))
             rcomp.bind_component()
 
         self.logger.info("Bound all remote HAL components")
@@ -241,7 +253,7 @@ class Statemachine():
             pos = f.read().split("\n")
         except IOError:
             self.logger.Error("Could not read position file!")
-            return None, None
+            return 0.0, 0.0
 
         if len(pos) < 2:
             return 0.0, 0.0
@@ -335,9 +347,6 @@ class Statemachine():
         else:
             self.set_state(State.gps)
 
-    def cleanup_gps_checker(self):
-        pass
-
     def set_config(self, config):
         self.pos_thread_timeout = config["pos_timeout"]
         self.check_threads_timeout = config["check_threads_timeout"]
@@ -365,21 +374,6 @@ class Statemachine():
 
         self.calibrate_max_velocity = config["calibrate_max_velocity"]
         self.calibrate_min_velocity = config["calibrate_min_velocity"]
-
-        """
-        self.velocity_igain = config["velocity_igain"]
-        self.velocity_pgain = config["velocity_pgain"]
-
-        self.pos_igain = config["pos_igain"]
-        self.pos_pgain = config["pos_pgain"]
-
-        self.calibrate_velocity_igain = config["calibrate_velocity_igain"]
-        self.calibrate_velocity_pgain = config["calibrate_velocity_pgain"]
-
-        self.calibrate_pos_igain = config["calibrate_pos_igain"]
-        self.calibrate_pos_pgain = config["calibrate_pos_pgain"]
-        """
-
 
     def set_az_pos_limits(self, max, min):
         lim = self.halrcomps["pos-comps"]
@@ -413,6 +407,7 @@ class Statemachine():
         az_reset.set(False)
 
     def calibrate_az(self):
+        self.logger.info("Started calibrating azimuth")
         self.set_calibrate_velocity()
 
         if self.init_az > 0:
@@ -424,9 +419,9 @@ class Statemachine():
 
         az_pos = self.wait_for_zero_az()
 
-        self.set_normal_velocity()
-
         self.reset_az_encoder()
+
+        self.set_normal_velocity()
 
         #10 degrees, want to go the last ones slow
         opposite_side = -direction * (self.az_range - 10)
@@ -443,7 +438,7 @@ class Statemachine():
 
         #TODO move to middle and reset abspos?
         mid = total_az_range/2.0
-        self.send_az_cal_pos(direction*mid)
+        self.send_az_calibrate_pos(direction*mid)
 
         temp2 = self.wait_for_zero_az()
 
@@ -454,7 +449,7 @@ class Statemachine():
         pass
 
     def calibrate(self):
-        self.set_state(State.calibrating)
+        self.set_state(Override.calibrating)
 
         self.logger.info("Calibrating")
 
@@ -587,8 +582,8 @@ class Statemachine():
         self.pos_thread.join()
         self.logger.info("Shutdown pos thread")
 
-        shutdown_hal()
         self.sd.stop()
+        shutdown_hal()
         for name, rcomp in self.halrcomps.iteritems():
             rcomp.remove_pins()
             rcomp.set_disconnected()

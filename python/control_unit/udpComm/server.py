@@ -27,7 +27,7 @@ class Communication():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._socket.bind((ip, port))
         except socket.error, msg:
-            self.logger.Error("Failed to bind/create socket, %s" % (msg))
+            self.logger.error("Failed to bind/create socket, %s" % (msg))
             return
 
         self._long_start     = 171

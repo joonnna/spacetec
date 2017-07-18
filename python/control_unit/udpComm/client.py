@@ -44,17 +44,20 @@ class Udpclient():
         f.close()
         lines = data.split("\n")
 
-        while True:
-            if self._should_stop(cleanup_event):
-                self.logger.info("Exiting udp client")
-                return
-            for line in lines:
+        try:
+            while True:
                 if self._should_stop(cleanup_event):
                     self.logger.info("Exiting udp client")
                     return
+                for line in lines:
+                    if self._should_stop(cleanup_event):
+                        self.logger.info("Exiting udp client")
+                        return
 
-                if len(line) <= 1:
-                    continue
+                    if len(line) <= 1:
+                        continue
 
-                self.send_msg(line)
-                time.sleep(0.1)
+                    self.send_msg(line)
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            return
