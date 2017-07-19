@@ -14,6 +14,8 @@ class CommTest(unittest.TestCase):
         self.client = Udpclient()
         self.comm = Communication()
 
+        thread.start_new_thread(self.client.run, (None, self.exit_event))
+
     def tearDown(self):
         self.client.shutdown()
         self.exit_event.wait()
@@ -39,8 +41,15 @@ class CommTest(unittest.TestCase):
             self.assertEqual(var, received_pos[idx])
 
     #TODO Don't know expected output...
-   # def test_calc_pos(self):
-   #     pass
+    def test_calc_pos(self):
+        long = 18.968714
+        lat = 69.661945
+        height = 500.0
+
+        ret = self.comm._calc_pos((long, lat, height))
+
+        self.assertEqual(90.90211498768772, ret[0])
+        self.assertEqual(21.533795781599938, ret[1])
 
  #   def test_gps_input(self):
   #      self.comm.get_local_gps_pos()

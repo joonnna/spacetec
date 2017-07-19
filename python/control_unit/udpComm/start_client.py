@@ -2,4 +2,6 @@ from client import *
 
 client = Udpclient()
 
-client.run()
+data = "/home/machinekit/machinekit/spacetec/data_files/test_pos"
+
+client.run(data)

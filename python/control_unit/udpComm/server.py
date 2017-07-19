@@ -4,6 +4,7 @@ import gps
 import thread
 import time
 import logging
+import numpy
 from parse_config import read_comm_config
 
 
@@ -66,12 +67,11 @@ class Communication():
         #latitude   = 69.29
         #height     = 1.0
 
-
         a = 6378137.0
         b = 6356752.31424518
 
-        f = (a-b)/a;
-        e_2 = 2*f - (f*f);
+        f = (a-b)/a
+        e_2 = 2*f - (f*f)
 
         lat_0 = math.radians(self._loc_lat)
         lon_0 = math.radians(self._loc_long)
@@ -80,7 +80,6 @@ class Communication():
         lat_GPS = math.radians(latitude)
         lon_GPS = math.radians(longtitude)
         h_GPS = height
-
 
         sin_lat_02 = math.sin(lat_0) * math.sin(lat_0)
         sin_lat_gps_2 = math.sin(lat_GPS) * math.sin(lat_GPS)
@@ -106,20 +105,35 @@ class Communication():
         el_rad = math.asin(delta_h/r)
         el_deg = math.degrees(el_rad)
 
-        """
-        x = longtitude - loc_long
-        y = latitude - loc_lat
-        z = height - loc_height
+        # Coordinates (S, E, V)
+        # Calculate South, East, Local Vertical
 
-        r = math.math.sqrt((x*x + y*y + z*z))
-        """
+        #rho_matrix = [delta_x; delta_y; delta_z]
+        rho_matrix = numpy.matrix([[delta_x], [delta_y], [delta_z]])
 
-        az_rad = math.atan((delta_x/delta_y))
+        row0 = [math.sin(lat_0) * math.cos(lon_0), math.sin(lat_0) * math.sin(lon_0), -math.cos(lat_0)]
+        row1 = [-math.sin(lon_0), math.cos(lon_0), 0]
+        row2 = [math.cos(lat_0)*math.cos(lon_0), math.cos(lat_0)*math.sin(lon_0), math.sin(lat_0)]
 
-        #TODO sketchy -180.0
-        az_deg = 180.0 - math.degrees(az_rad)
+        SEV_hat_matrix = numpy.matrix([row0, row1, row2])
 
-        return az_deg, el_deg, height
+        SEV_matrix = SEV_hat_matrix * rho_matrix
+        S = SEV_matrix[0]
+        E = SEV_matrix[1]
+        V = SEV_matrix[2]
+
+        # Calculate azimuth
+        SEV_az_rad = math.atan2(E, -S)
+        SEV_az_deg = math.degrees(SEV_az_rad)
+
+        # Fix 180 degree
+        delta_lon = lon_GPS - lon_0
+        if delta_lon >= 0:
+            final_az = SEV_az_deg
+        if delta_lon < 0:
+            final_az = 360 + SEV_az_deg
+
+        return final_az, el_deg, height
 
     def gps_cleanup(self):
         pass

@@ -130,6 +130,11 @@ setp vpid.0.enable true
 setp vpid.1.enable true
 setp ppid.0.enable true
 
+setp ppid.0.Pgain 1
+setp ppid.0.Igain 0.005
+setp ppid.0.maxerror 10
+setp ppid.0.maxerrorI 5
+
 setp vpid.0.Pgain 0.001
 setp vpid.0.Igain 0.005
 setp vpid.0.maxerror 200
