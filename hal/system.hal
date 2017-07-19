@@ -1,19 +1,24 @@
-newthread fast_thread fp [HAL_THRAD_PERIODS]FAST_THREAD slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
+newthread fast_thread fp [HAL_THREAD_PERIODS]FAST_THREAD
+newthread slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
 
-newinst muxn muxn.0 pincount=3
-newinst muxn muxn.1 pincount=3
-newinst muxn vmuxn.0 pincount=4
-newinst muxn vmuxn.1 pincount=4
+newinst muxn muxn.0 pincount=5
+newinst muxn muxn.1 pincount=5
+newinst muxn vmuxn.0 pincount=3
+newinst muxn vmuxn.1 pincount=3
 loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
 loadrt bldc cfg=q,q #Probably wrong config
-loadrt scale count=10 
+loadrt scale count=10
 loadrt sigcheck
 loadrt steptrack count=2
 loadrt lowpass
 loadrt near count=4
 loadrt and2 names=angle_and,state_and
+
+###########################
+#BLDC/HOSTMOT CONFIG START#
+###########################
 
 loadrt hostmot2
 newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo"
@@ -32,16 +37,16 @@ net scale_3-to-pwmgen_04 scale.7.out => hm2_de0n.0.pwmgen.03.value
 net scale_4-to-pwmgen_05 scale.8.out => hm2_de0n.0.pwmgen.04.value
 net scale_5-to-pwmgen_06 scale.9.out => hm2_de0n.0.pwmgen.05.value
 
-net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position => scale.0.in
-net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position => scale.2.in
+net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position scale.0.in
+net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position scale.2.in
 
+net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcounts
+net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
-net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcount => bldc.0.rawcounts
-net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcount => bldc.1.rawcounts
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity vpid.0.feedback near.0.in1
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity vpid.1.feedback near.1.in2
+#net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity vpid.1.feedback near.4.in1
 
-
-net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
-net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
 
 setp hm2_de0n.0.pwmgen.00.enable TRUE
 setp hm2_de0n.0.pwmgen.01.enable TRUE
@@ -50,8 +55,16 @@ setp hm2_de0n.0.pwmgen.03.enable TRUE
 setp hm2_de0n.0.pwmgen.04.enable TRUE
 setp hm2_de0n.0.pwmgen.05.enable TRUE
 
-
 setp hm2_de0n.0.pwmgen.pwm_frequency 40000
+
+# ONLY FOR TESTBED
+# set motor driver enable high
+setp hm2_de0n.0.gpio.042.out TRUE
+setp hm2_de0n.0.gpio.043.out TRUE
+setp hm2_de0n.0.gpio.044.out TRUE
+setp hm2_de0n.0.gpio.042.is_output TRUE
+setp hm2_de0n.0.gpio.043.is_output TRUE
+setp hm2_de0n.0.gpio.044.is_output TRUE
 
 # set bldc scale and poles
 setp bldc.0.scale 2048
@@ -59,6 +72,10 @@ setp bldc.0.poles 8
 
 setp bldc.1.scale 2048
 setp bldc.1.poles 8
+
+setp hm2_de0n.0.encoder.00.scale [ENCODER_SCALES]SCALE
+setp hm2_de0n.0.encoder.01.scale [ENCODER_SCALES]SCALE
+#setp hm2_de0n.0.encoder.01.scale 4096/360*10
 
 # set bldc to pwmgen scale gain
 setp scale.4.gain 0.5
@@ -76,18 +93,33 @@ setp scale.7.offset 0.5
 setp scale.8.offset 0.5
 setp scale.9.offset 0.5
 
+########################
+#BLDC/HOSTMOT CONFIG END#
+#########################
 
-#Early definitons to link signal
+#########################
+#REMOTE COMPONENTS START#
+#########################
+
 newcomp step
 newpin step step.track bit in
 newpin step step.manual s32 in
 ready step
 
+newcomp set-angle
+newpin set-angle set-angle.az_angle float io
+newpin set-angle set-angle.el_angle float io
+ready set-angle
+
+newcomp rssi-reader
+newpin rssi-reader rssi-reader.value float out
+ready rssi-reader
+
 newcomp velmux
 newpin velmux velmux.az_sel s32 out
 newpin velmux velmux.el_sel s32 out
-newpin velmux velmux.az_out float out
-newpin velmux velmux.el_out float out
+#newpin velmux velmux.az_out float out
+#newpin velmux velmux.el_out float out
 ready velmux
 
 newcomp gpsmux
@@ -95,8 +127,8 @@ newpin gpsmux gpsmux.az_sel s32 out
 newpin gpsmux gpsmux.el_sel s32 out
 newpin gpsmux gpsmux.az_gps float out
 newpin gpsmux gpsmux.el_gps float out
-newpin gpsmux gpsmux.az_step float out
-newpin gpsmux gpsmux.el_step float out
+newpin gpsmux gpsmux.az_calibration float out
+newpin gpsmux gpsmux.el_calibration float out
 ready gpsmux
 
 newcomp abspos
@@ -114,8 +146,10 @@ newpin pos-comps pos-comps.min_el float io
 ready pos-comps
 
 newcomp vel-comps
-newpin vel-comps vel-comps.max_vel float io
-newpin vel-comps vel-comps.min_vel float io
+newpin vel-comps vel-comps.az_max_vel float io
+newpin vel-comps vel-comps.az_min_vel float io
+newpin vel-comps vel-comps.el_max_vel float io
+newpin vel-comps vel-comps.el_min_vel float io
 ready vel-comps
 
 newcomp motor-feedback
@@ -125,7 +159,54 @@ newpin motor-feedback motor-feedback.az_pos float in
 newpin motor-feedback motor-feedback.el_pos float in
 newpin motor-feedback motor-feedback.reset_el bit out
 newpin motor-feedback motor-feedback.reset_az bit out
+newpin motor-feedback motor-feedback.az_init_start bit out
+newpin motor-feedback motor-feedback.az_init_done bit in
+newpin motor-feedback motor-feedback.el_init_start bit out
+newpin motor-feedback motor-feedback.el_init_done bit in
+#newpin motor-feedback motor-feedback.near_az_calibration_velocity bit in
 ready motor-feedback
+
+#######################
+#REMOTE COMPONENTS END#
+#######################
+
+
+###############################
+#ANGLE/SIGNAL THRESHOLDS START#
+###############################
+
+net encoder.0.reset hm2_de0n.0.encoder.00.reset motor-feedback.reset_az
+
+# Assume we start in GPS mode
+setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
+setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
+
+# Angle threshold between gps/tracking
+net az_angle set-angle.az_angle near.2.difference
+net el_angle set-angle.el_angle near.3.difference
+
+net angle-to-state angle_and.out state_and.in0
+net sig-to-state sigcheck.0.out2 state_and.in1
+net state-to-python state_and.out step.track
+
+# parameter values
+setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.re-enter-limit [SIGNAL]SIGNAL_REENTER_LIMIT
+setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
+setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
+setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
+
+setp near.0.difference [NEAR_ZERO]DIFF
+setp near.1.difference [NEAR_ZERO]DIFF
+
+#############################
+#ANGLE/SIGNAL THRESHOLDS END#
+#############################
+
+
+######################
+#LIM/PID VALUES START#
+######################
 
 setp ppid.0.enable true
 setp ppid.1.enable true
@@ -133,47 +214,49 @@ setp ppid.1.enable true
 setp vpid.0.enable true
 setp vpid.1.enable true
 
-######################################
-#1st set of components and connections
-######################################
-
-# parameter values
-setp sigcheck.0.sig-limit [SIGNAL]SIGNAL_LIMIT
-setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
-setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
-
 setp bldc-lim.0.max 1.0
 setp bldc-lim.0.min -1.0
 
 setp bldc-lim.1.max 1.0
 setp bldc-lim.1.min -1.0
 
-setp vlim.0.max [VEL_LIMS]VEL_LIM_MAX
-setp vlim.0.min [VEL_LIMS]VEL_LIM_MIN
+setp vlim.0.max [AZ_VEL_LIMITS]MAX
+setp vlim.0.min [AZ_VEL_LIMITS]MIN
+setp vlim.0.maxv [AZ_VEL_LIMITS]MAX_V
 
-setp plim.0.max [POS_LIMS]POS_LIM_MAX
-setp plim.0.min [POS_LIMS]POS_LIM_MIN
+setp vlim.1.max [EL_VEL_LIMITS]MAX
+setp vlim.1.min [EL_VEL_LIMITS]MIN
+setp vlim.1.maxv [EL_VEL_LIMITS]MAX_V
 
-setp vpid.0.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.0.Igain [VEL_PID]VEL_PID_IGAIN
+setp plim.0.max [AZ_POS_LIMITS]MAX
+setp plim.0.min [AZ_POS_LIMITS]MIN
 
-setp ppid.0.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.0.Igain [POS_PID]POS_PID_PGAIN
+setp plim.1.max [EL_POS_LIMITS]MAX
+setp plim.1.min [EL_POS_LIMITS]MIN
 
-setp vlim.1.max [VEL_LIMS]VEL_LIM_MAX
-setp vlim.1.min [VEL_LIMS]VEL_LIM_MIN
+setp vpid.0.Pgain [AZ_VEL_PID]PGAIN
+setp vpid.0.Igain [AZ_VEL_PID]IGAIN
+setp vpid.0.maxerror [AZ_VEL_PID]MAX_ERROR
+setp vpid.0.maxerrorI [AZ_VEL_PID]MAX_ERROR_I
+setp vpid.0.maxoutput [AZ_VEL_PID]MAX_OUTPUT
 
-setp plim.1.max [POS_LIMS]POS_LIM_MAX
-setp plim.1.min [POS_LIMS]POS_LIM_MIN
+setp vpid.1.Pgain [EL_VEL_PID]PGAIN
+setp vpid.1.Igain [EL_VEL_PID]IGAIN
+setp vpid.1.maxerror [EL_VEL_PID]MAX_ERROR
+setp vpid.1.maxerrorI [EL_VEL_PID]MAX_ERROR_I
+setp vpid.1.maxoutput [EL_VEL_PID]MAX_OUTPUT
 
-setp vpid.1.Pgain [VEL_PID]VEL_PID_PGAIN
-setp vpid.1.Igain [VEL_PID]VEL_PID_IGAIN
+setp ppid.0.Pgain [AZ_POS_PID]PGAIN
+setp ppid.0.Dgain [AZ_POS_PID]DGAIN
+setp ppid.0.Igain [AZ_POS_PID]IGAIN
+setp ppid.0.maxerror [AZ_POS_PID]MAX_ERROR
+setp ppid.0.maxerrorI [AZ_POS_PID]MAX_ERROR_I
 
-setp ppid.1.Pgain [POS_PID]POS_PID_PGAIN
-setp ppid.1.Igain [POS_PID]POS_PID_PGAIN
-
-setp near.2.difference [GPS_LIMITS]AZ_LIM
-setp near.3.difference [GPS_LIMITS]EL_LIM
+setp ppid.1.Pgain [EL_POS_PID]PGAIN
+setp ppid.1.Dgain [EL_POS_PID]DGAIN
+setp ppid.1.Igain [EL_POS_PID]IGAIN
+setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
+setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
 
 net max_az.0 pos-comps.max_az plim.0.max
 net min_az.0 pos-comps.min_az plim.0.min
@@ -181,149 +264,139 @@ net min_az.0 pos-comps.min_az plim.0.min
 net max_el.1 pos-comps.max_el plim.1.max
 net min_el.1 pos-comps.min_el plim.1.min
 
-net vel-max vel-comps.max_vel vlim.0.max vlim.1.max
-net vel-min vel-comps.min_vel vlim.0.min vlim.1.min
+net az_max_vel vel-comps.az_max_vel vlim.0.max
+net az_min_vel vel-comps.az_min_vel vlim.0.min
+
+net el_max_vel vel-comps.el_max_vel vlim.1.max
+net el_min_vel vel-comps.el_min_vel vlim.1.min
+
+####################
+#LIM/PID VALUES END#
+####################
 
 
-# Net's for 1st set
+###################
+#SYSTEM FLOW START#
+###################
 
-#Set limits
-
-#System flow
 net mux-to-plim.0 muxn.0.out plim.0.in
+net mux-to-plim.1 muxn.1.out plim.1.in
 
 net plim-to-ppid.0 plim.0.out ppid.0.command
+net plim-to-ppid.1 plim.1.out ppid.1.command
+
+net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1 motor-feedback.az_pos
+net abs-to-ppid-step.1 scale.3.out ppid.1.feedback steptrack.1.in1 motor-feedback.el_pos
 
 net ppid-to-vmux.0 ppid.0.output vmuxn.0.in2
+net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
 
-net vmux-to-vlim vmuxn.0.out vlim.0.in
+net vmux-to-vlim.0 vmuxn.0.out vlim.0.in
+net vmux-to-vlim.1 vmuxn.1.out vlim.1.in
 
 net vlim-to-vpid.0 vlim.0.out vpid.0.command
+net vlim-to-vpid.1 vlim.1.out vpid.1.command
 
 net vpid-to-bldc-lim.0 vpid.0.output bldc-lim.0.in
+net vpid-to-bldc-lim.1 vpid.1.output bldc-lim.1.in
 
 net lim-to-bldc.0 bldc-lim.0.out bldc.0.value
-
-net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1
+net lim-to-bldc.1 bldc-lim.1.out bldc.1.value
 
 net filter-to-sigcheck lowpass.0.out sigcheck.0.in
 
+net rssi-reader-to-filter rssi-reader.value lowpass.0.in
+
 net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
-
-net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1
-
-net near-to-and.0 near.2.out angle_and.in0
-
-net angle-to-state angle_and.out state_and.in0
-net sig-to-state sigcheck.0.out2 state_and.in1
-net state-to-python state_and.out step.track
-
-#Need motor feedback (velocity/pos)
-#net enc-to-vpid enc.. vpid.0.feedback
-#net enc-to-abspos enc.. abspos.0.in0
-#net enc-to-near.. near.0.in2
-net near-to-python.0 near.0.out motor-feedback.zero_az
-
-
-#Remote component nets
-
-#az gps mux
-net sel.0 gpsmux.az_sel muxn.0.sel
-net gps_az gpsmux.az_gps muxn.0.in1 near.2.in2
-
-#az vel mux
-net vsel.0 velmux.az_sel vmuxn.0.sel
-net vinput.0 velmux.az_out vmuxn.0.in1
-
-#az scales
-net abspos.0 scale.0.out abspos.az_in scale.1.in
-net reset.0 abspos.az_reset scale.0.offset
-
-
-######################################
-#2th set of components and connections
-######################################
-
-net mux-to-plim.1 muxn.1.out plim.1.in
-
-net plim-to-ppid.1 plim.1.out ppid.1.command
-
-net abs-to-ppid-step.1 scale.3.out ppid.1.feedback steptrack.1.in1
-
-net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
-
-net vmux-to-vlim.1 vmuxn.1.out vlim.1.in
-
-net vpid-to-bldc-lim.1 vpid.1.output bldc-lim.1.in
-
-net lim-to-bldc.1 bldc-lim.1.out bldc.1.value
-
 net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
 
+net step-to-mux-near.0 steptrack.0.out muxn.0.in0 near.2.in1
 net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1
 
+net near-to-and.0 near.2.out angle_and.in0
 net near-to-and.1 near.3.out angle_and.in1
 
-#Need motor feedback (velocity/pos)
-#net enc-to-vpid enc.. vpid.1.feedback
-#net enc-to-abspos enc.. abspos.1.in0
-#net enc-to-near.. near.1.in2
+net near-to-python.0 near.0.out motor-feedback.zero_az
 net near-to-python.1 near.1.out motor-feedback.zero_el
 
+net init-to-bldc.0 motor-feedback.az_init_start bldc.0.init
+net init-to-bldc.1 motor-feedback.el_init_start bldc.1.init
+
+net init-bldc-done.0 bldc.0.init-done motor-feedback.az_init_done
+net init-bldc-done.1 bldc.1.init-done motor-feedback.el_init_done
+
+net sel.0 gpsmux.az_sel muxn.0.sel
 net sel.1 gpsmux.el_sel muxn.1.sel
+
+net gps_az gpsmux.az_gps muxn.0.in1 near.2.in2
 net gps_el gpsmux.el_gps muxn.1.in1 near.3.in2
 
-#el vel mux
-net vsel.1 velmux.el_sel vmuxn.1.sel
-net vinput.1 velmux.el_out vmuxn.1.in1
+net calibrate_az gpsmux.az_calibration muxn.0.in2
+net calibrate_el gpsmux.el_calibration muxn.1.in2
 
+net vsel.0 velmux.az_sel vmuxn.0.sel
+net vsel.1 velmux.el_sel vmuxn.1.sel
+
+#net vinput.0 velmux.az_out vmuxn.0.in1
+#net vinput.1 velmux.el_out vmuxn.1.in1
+
+net abspos.0 scale.0.out abspos.az_in scale.1.in
 net abspos.1 scale.2.out abspos.el_in scale.3.in
+
+net reset.0 abspos.az_reset scale.0.offset
 net reset.1 abspos.el_reset scale.2.offset
 
-
-##########################
-#Single components
-##########################
+#################
+#SYSTEM FLOW END#
+#################
 
 setp scale.0.gain 1
 setp scale.1.gain 1
 setp scale.2.gain 1
 setp scale.3.gain 1
+
+setp scale.1.offset [COMPASS_OFFSET]AZ_OFFSET
+setp scale.3.offset [COMPASS_OFFSET]EL_OFFSET
+
 setp lowpass.0.gain 1
 
-# functions #1
-
-addf hm2_de0n.0.read slow_thread
-addf hm2_de0n.0.write slow_thread
+#################
+#FUNCTIONS START#
+#################
 
 addf lowpass.0 slow_thread
 addf sigcheck.0 slow_thread
 
 addf near.0 slow_thread
-addf scale.0 slow_thread
-addf scale.1 slow_thread
 addf steptrack.0 slow_thread
-addf muxn.0 slow_thread
-addf vmuxn.0 slow_thread
-addf bldc.0 slow_thread
 
 addf angle_and slow_thread
 addf state_and slow_thread
 
 addf near.1 slow_thread
-addf scale.2 slow_thread
-addf scale.3 slow_thread
 addf steptrack.1 slow_thread
-addf muxn.1 slow_thread
-addf vmuxn.1 slow_thread
-addf bldc.1 slow_thread
+
+addf near.2 slow_thread
+addf near.3 slow_thread
 
 # fast threads
+addf hm2_de0n.0.read fast_thread
+addf hm2_de0n.0.write fast_thread
+
+addf muxn.0 fast_thread
+addf muxn.1 fast_thread
+
+addf bldc.0 fast_thread
+addf bldc.1 fast_thread
+
 addf plim.0 fast_thread
 addf plim.1 fast_thread
 
 addf vlim.0 fast_thread
 addf vlim.1 fast_thread
+
+addf vmuxn.0 fast_thread
+addf vmuxn.1 fast_thread
 
 addf vpid.0.do-pid-calcs fast_thread
 addf vpid.1.do-pid-calcs fast_thread
@@ -333,6 +406,24 @@ addf ppid.1.do-pid-calcs fast_thread
 
 addf bldc-lim.0 fast_thread
 addf bldc-lim.1 fast_thread
+
+
+addf scale.0 fast_thread
+addf scale.1 fast_thread
+addf scale.2 fast_thread
+addf scale.3 fast_thread
+addf scale.4 fast_thread
+addf scale.5 fast_thread
+addf scale.6 fast_thread
+addf scale.7 fast_thread
+addf scale.8 fast_thread
+addf scale.9 fast_thread
+
+###############
+#FUNCTIONS END#
+###############
+
+
 
 start
 

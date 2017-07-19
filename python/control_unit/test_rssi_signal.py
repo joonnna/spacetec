@@ -11,10 +11,10 @@ class RssiTest(BaseTest):
         self.thread1 = new_thread(mock_up_func, mock_up_cleanup, 5.0)
         self.no_client = True
         #Simulate client started
-        self.sm.set_state(State.stop_idle)
+        self.sm.set_state(Override.stop)
 
-        self.sm.halrcomps["test-set-angle"].getpin("az_angle").set(10000000.0)
-        self.sm.halrcomps["test-set-angle"].getpin("el_angle").set(10000000.0)
+        self.sm.halrcomps["set-angle"].getpin("az_angle").set(10000000.0)
+        self.sm.halrcomps["set-angle"].getpin("el_angle").set(10000000.0)
 
 
     def test_low_signal_state(self):
@@ -24,7 +24,7 @@ class RssiTest(BaseTest):
         self.assertEqual(self.sm.state, State.gps)
 
     def test_high_signal_state(self):
-        high_sig = self.sm.sig_limit + 1.0
+        high_sig = self.sm.sig_re_enter_limit + 1.0
         self.set_rssi_and_wait(high_sig)
 
         self.assertEqual(self.sm.state, State.tracking)
@@ -35,7 +35,7 @@ class RssiTest(BaseTest):
 
         self.assertEqual(self.sm.state, State.gps)
 
-        high_sig = self.sm.sig_limit + 1.0
+        high_sig = self.sm.sig_re_enter_limit + 1.0
         self.set_rssi_and_wait(high_sig)
 
         self.assertEqual(self.sm.state, State.tracking)
@@ -44,6 +44,30 @@ class RssiTest(BaseTest):
 
         self.assertEqual(self.sm.state, State.gps)
 
+    def test_re_enter_limits(self):
+        low_sig = self.sm.sig_limit - 1.0
+        self.set_rssi_and_wait(low_sig)
+
+        self.assertEqual(self.sm.state, State.gps)
+
+        diff = self.sm.sig_re_enter_limit - self.sm.sig_limit
+        sig = self.sm.sig_limit + (diff/2.0)
+
+        self.set_rssi_and_wait(sig)
+
+        self.assertEqual(self.sm.state, State.gps)
+
+        high_sig = self.sm.sig_re_enter_limit + 1.0
+        self.set_rssi_and_wait(high_sig)
+
+        self.assertEqual(self.sm.state, State.tracking)
+
+        diff = self.sm.sig_re_enter_limit - self.sm.sig_limit
+        sig = self.sm.sig_limit + (diff/2.0)
+
+        self.set_rssi_and_wait(sig)
+
+        self.assertEqual(self.sm.state, State.gps)
 
     def set_rssi_and_wait(self, val):
         self.sm.halrcomps["rrssi"].getpin("out").set(val)
@@ -54,7 +78,6 @@ class RssiTest(BaseTest):
         self.wait()
 
         self.clear()
-
 
 
 

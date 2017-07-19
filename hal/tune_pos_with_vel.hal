@@ -1,7 +1,8 @@
 newthread fpthread fp 50000
-loadrt limit1 count=2
+loadrt limit1 count=3
 loadrt limit2 count=2
-loadrt pid names=vpid.0,vpid.1
+loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
+
 
 #########################
 #BLDC/HOSTMOT CONFIG START
@@ -66,6 +67,8 @@ net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcoun
 net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
 net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
 
+net encoder.0.pos-to-pid hm2_de0n.0.encoder.00.position => ppid.0.feedback
+
 # set bldc to pwmgen scale gain
 setp scale.0.gain 0.5
 setp scale.1.gain 0.5
@@ -91,8 +94,16 @@ setp scale.5.offset 0.5
 #LIM VALUES START
 ################
 
+net plim-to-ppid limit1.2.out ppid.0.command
+
+net ppid-to-vlim ppid.0.output limit2.0.in
+
 net limit1-to-vpid.0 limit2.0.out vpid.0.command
 net limit1-to-vpid.1 limit1.1.out vpid.1.command
+
+
+setp limit1.2.max 360
+setp limit1.2.min -360
 
 setp limit2.0.max 700.0
 setp limit2.0.maxv 10.0
@@ -117,6 +128,12 @@ setp limit1.1.min -1.0
 ################
 setp vpid.0.enable true
 setp vpid.1.enable true
+setp ppid.0.enable true
+
+setp ppid.0.Pgain 1
+setp ppid.0.Igain 0.005
+setp ppid.0.maxerror 10
+setp ppid.0.maxerrorI 5
 
 setp vpid.0.Pgain 0.001
 setp vpid.0.Igain 0.005
@@ -155,11 +172,15 @@ addf scale.5.funct fpthread
 addf limit1.0 fpthread
 addf limit1.1 fpthread
 
+addf limit1.2 fpthread
+
 addf limit2.0 fpthread
 addf limit2.1 fpthread
 
 addf vpid.0.do-pid-calcs fpthread
 addf vpid.1.do-pid-calcs fpthread
+
+addf ppid.0.do-pid-calcs fpthread
 
 start
 loadusr halscope

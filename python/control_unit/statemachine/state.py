@@ -7,6 +7,7 @@ from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
 from parse_config import read_config
 from state_enum import *
+import threading
 
 
 class Statemachine():
@@ -14,41 +15,56 @@ class Statemachine():
         self.state_lock = threading.Lock()
         self.gps_angle_lock = threading.Lock()
 
+        self.az_init_event = threading.Event()
+        self.el_init_event = threading.Event()
+
+        if testing:
+            self.az_init_event.set()
+            self.el_init_event.set()
+
         self.zero_az_event = threading.Event()
         self.zero_el_event = threading.Event()
+
+        self.moving_az_event = threading.Event()
+        self.moving_el_event = threading.Event()
+        self.moving_timeout = 5.0
 
         self.filepath = pos_file
 
         config = read_config()
         self.set_config(config)
 
+
         logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
         self.logger = logging.getLogger("state")
+
+        self.logger.info("Started statemachine init!")
 
         pos = self.read_init_pos()
 
         az = pos[0]
         el = pos[1]
 
-        self.gps_az = 0
-        self.gps_el = 0
-        self.gps_height = 0
+        az = 0
+        el = 0
 
         self.init_az = az
         self.init_el = el
+
+        self.state = Override.calibrating
 
         self.sd = ServiceDiscovery()
         self.halrcomps = {}
         self.initrcomps(testing)
         self._search_and_bind()
 
-        #Need init value...
-        self.state = State.calibrating
+        #self.set_velocity_limits(500.0, -500.0)
+        #self.set_az_pos_limits(self.az_range, -self.az_range)
+        self.logger.info("Waiting for bldc init")
+        self.wait_for_init()
+        self.logger.info("Bldc init done!")
 
-        #self.calibrate()
-        self.set_state(State.idle)
-       # self.start_gps_checker_thread()
-        self.reset_abspos(az, el)
+        self.calibrate()
         self.start_pos_thread()
 
     def initrcomps(self, testing):
@@ -56,16 +72,16 @@ class Statemachine():
         gps_mux.newpin("az_sel", halremote.HAL_S32, halremote.HAL_OUT)
         gps_mux.newpin("el_sel", halremote.HAL_S32, halremote.HAL_OUT)
         gps_mux.newpin("az_gps", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        gps_mux.newpin("az_step", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        gps_mux.newpin("az_calibration", halremote.HAL_FLOAT, halremote.HAL_OUT)
         gps_mux.newpin("el_gps", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        gps_mux.newpin("el_step", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        gps_mux.newpin("el_calibration", halremote.HAL_FLOAT, halremote.HAL_OUT)
         gps_mux.no_create = True
 
         vel_mux = halremote.RemoteComponent("velmux", debug=False)
         vel_mux.newpin("az_sel", halremote.HAL_S32, halremote.HAL_OUT)
         vel_mux.newpin("el_sel", halremote.HAL_S32, halremote.HAL_OUT)
-        vel_mux.newpin("az_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        vel_mux.newpin("el_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        #vel_mux.newpin("az_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        #vel_mux.newpin("el_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         vel_mux.no_create = True
 
         abspos = halremote.RemoteComponent("abspos", debug=False)
@@ -90,8 +106,10 @@ class Statemachine():
         pos_comps.no_create = True
 
         vel_comps = halremote.RemoteComponent("vel-comps", debug=False)
-        vel_comps.newpin("max_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
-        vel_comps.newpin("min_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
+        vel_comps.newpin("az_max_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
+        vel_comps.newpin("az_min_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
+        vel_comps.newpin("el_max_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
+        vel_comps.newpin("el_min_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
         vel_comps.no_create = True
 
         motor_feedback = halremote.RemoteComponent("motor-feedback", debug=False)
@@ -101,10 +119,23 @@ class Statemachine():
         motor_feedback.newpin("el_pos", halremote.HAL_FLOAT, halremote.HAL_IN)
         motor_feedback.newpin("reset_az", halremote.HAL_BIT, halremote.HAL_OUT)
         motor_feedback.newpin("reset_el", halremote.HAL_BIT, halremote.HAL_OUT)
+        motor_feedback.newpin("az_init_start", halremote.HAL_BIT, halremote.HAL_OUT)
+        motor_feedback.newpin("el_init_start", halremote.HAL_BIT, halremote.HAL_OUT)
+        az_init = motor_feedback.newpin("az_init_done", halremote.HAL_BIT, halremote.HAL_IN)
+        el_init = motor_feedback.newpin("el_init_done", halremote.HAL_BIT, halremote.HAL_IN)
+        az_init.on_value_changed.append(self.az_init_done)
+        el_init.on_value_changed.append(self.el_init_done)
+
         zero_az.on_value_changed.append(self.zero_az_callback)
         zero_el.on_value_changed.append(self.zero_el_callback)
         motor_feedback.no_create = True
 
+        gps_angle_check = halremote.RemoteComponent("set-angle", debug=False)
+        gps_angle_check.newpin("az_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
+        gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
+        gps_angle_check.no_create = True
+
+        self.halrcomps[gps_angle_check.name] = gps_angle_check
         self.halrcomps[motor_feedback.name] = motor_feedback
         self.halrcomps[pos_comps.name] = pos_comps
         self.halrcomps[vel_comps.name] = vel_comps
@@ -141,12 +172,6 @@ class Statemachine():
             test_feedback.newpin("el", halremote.HAL_FLOAT, halremote.HAL_OUT)
             test_feedback.no_create = True
 
-            gps_angle_check = halremote.RemoteComponent("test-set-angle", debug=False)
-            gps_angle_check.newpin("az_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
-            gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
-            gps_angle_check.no_create = True
-
-            self.halrcomps[gps_angle_check.name] = gps_angle_check
             self.halrcomps[test_feedback.name] = test_feedback
             self.halrcomps[check_step.name] = check_step
             self.halrcomps[rssi.name] = rssi
@@ -154,10 +179,33 @@ class Statemachine():
             self.halrcomps[bldc1.name] = bldc1
 
 
+    def az_calibration_velocity_callback(self, val):
+        if val:
+            self.moving_az_event.set()
+        else:
+            self.moving_az_event.clear()
+
+    def el_calibration_velocity_callback(self, val):
+        if val:
+            self.moving_el_event.set()
+        else:
+            self.moving_el_event.clear()
+
+    def az_init_done(self, val):
+        self.logger.debug("INIT DONE BITHCESEESS")
+        self.halrcomps["motor-feedback"].getpin("az_init_start").set(False)
+        self.az_init_event.set()
+
+    def el_init_done(self, val):
+        self.halrcomps["motor-feedback"].getpin("el_init_start").set(False)
+        self.el_init_event.set()
+
     def zero_az_callback(self, val):
         if val:
             self.zero_az_event.set()
+            self.moving_az_event.clear()
         else:
+            self.moving_az_event.set()
             self.zero_az_event.clear()
 
     def zero_el_callback(self, val):
@@ -166,37 +214,58 @@ class Statemachine():
         else:
             self.zero_el_event.clear()
 
+    def wait_for_init(self):
+        self.halrcomps["motor-feedback"].getpin("az_init_start").set(True)
+        self.az_init_event.wait()
+
     def wait_for_zero_az(self):
+        self.logger.info("Waiting for zero az velocity")
+
         self.zero_az_event.wait()
         self.zero_az_event.clear()
+
+        self.logger.info("Got zero az velocity!")
+
         return self.halrcomps["motor-feedback"].getpin("az_pos").get()
 
     def wait_for_zero_el(self):
+        self.logger.info("Waiting for zero el velocity")
+
         self.zero_el_event.wait()
         self.zero_el_event.clear()
+
+        self.logger.info("Waiting for zero el velocity")
+
         return self.halrcomps["motor-feedback"].getpin("el_pos").get()
 
     def manual_state_callback(self, val):
         if val == 0:
-            self.set_state(State.stop_manual)
+            self.set_state(Manual.stop)
         elif val == 1:
-            self.set_state(State.manual_position)
+            self.set_state(Manual.position)
         elif val == 2:
-            self.set_state(State.manual_velocity)
+            self.set_state(Manual.velocity)
         elif val == 3:
-            self.set_state(State.tracking_override)
+            self.set_state(Manual.tracking)
         else:
             self.logger.Error("Received undefined state value in manual state callback, exiting manual for safety reasons")
-            self.set_state(State.stop_manual)
+            self.set_state(Manual.stop)
+
 
     def _search_and_bind(self):
         for name, rcomp in self.halrcomps.iteritems():
             self.sd.register(rcomp)
 
+        self.logger.info("Started service discovery")
         self.sd.start()
 
         for name, rcomp in self.halrcomps.iteritems():
+            self.logger.debug("bound : %s" % (name))
             rcomp.bind_component()
+
+        for name, rcomp in self.halrcomps.iteritems():
+            rcomp.wait_connected()
+
 
         self.logger.info("Bound all remote HAL components")
 
@@ -207,7 +276,7 @@ class Statemachine():
             pos = f.read().split("\n")
         except IOError:
             self.logger.Error("Could not read position file!")
-            return None, None
+            return 0.0, 0.0
 
         if len(pos) < 2:
             return 0.0, 0.0
@@ -218,7 +287,6 @@ class Statemachine():
         abspos = self.halrcomps["abspos"]
         abspos.getpin("az_reset").set(az)
         abspos.getpin("el_reset").set(el)
-
 
     def get_abspos(self):
         abspos = self.halrcomps["abspos"]
@@ -255,16 +323,16 @@ class Statemachine():
 
     def send_az_calibrate_pos(self, az):
         self.az_cal = az
-        self.halrcomps["velmux"].getpin("az_out").set(az)
+        self.halrcomps["gpsmux"].getpin("az_calibration").set(az)
 
     def send_el_calibrate_pos(self, el):
         self.el_cal = el
-        self.halrcomps["velmux"].getpin("el_out").set(el)
+        self.halrcomps["gpsmux"].getpin("el_calibration").set(el)
 
     def send_gps_pos(self, pos):
         if self.get_state() == Override.idle:
             self.logger.info("Got first UDP packet!")
-            self.set_state(Override.stop_overide)
+            self.set_state(Override.stop)
 
         az = pos[0]
         el = pos[1]
@@ -275,27 +343,21 @@ class Statemachine():
         mux = self.halrcomps["gpsmux"]
         mux.getpin("az_gps").set(az)
         mux.getpin("el_gps").set(el)
-
  #       self.logger.debug("\naz: %f\nel:%f\nheight:%f\n" % (az, el, height))
 
         if height < self.overide_gps_height:
-            self.set_state(Override.gps_overide)
-        elif self.get_state() == Override.gps_overide:
-            self.set_state(Override.stop_override)
-
+            self.set_state(Override.gps)
+        elif self.get_state() == Override.gps:
+            self.set_state(Override.stop)
 
     def start_pos_thread(self):
         self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
         self.pos_thread.start()
 
     def start_comm_thread(self):
-        self.comm_thread = new_thread(self.comm_func, self.comm_cleanup, self.comm_thread_timeout, self.send_gps_pos)
+        comm = self.comm_constructor()
+        self.comm_thread = new_thread(comm.run, comm.shutdown, self.comm_thread_timeout, self.send_gps_pos)
         self.comm_thread.start()
-
-    def start_gps_checker_thread(self):
-        self.gps_checker_thread = new_thread(self.check_gps, self.cleanup_gps_checker, self.gps_checker_thread_timeout)
-        self.gps_checker_thread.start()
-
 
     def check_gps(self, val):
         if val:
@@ -303,34 +365,24 @@ class Statemachine():
         else:
             self.set_state(State.gps)
 
-        """
-        gps_az, gps_el, gps_height = self.get_gps_angle()
-
-        if gps_height < self.height_gps_limit:
-            self.set_state(State.gps_overide)
-            return
-        track_az, track_el = self.get_tracking_pos()
-
-        az_diff = abs(gps_az - track_az)
-        el_diff = abs(gps_el - track_el)
-
-        self.logger.info("\nGPS: %f, %f\n Tracking: %f, %f\n az_diff: %f, el_diff: %f" % (gps_az, gps_el, track_az, track_el, az_diff, el_diff))
-
-        if az_diff > self.az_gps_limit or el_diff > self.el_gps_limit:
-            self.set_state(State.gps)
-        """
-    def cleanup_gps_checker(self):
-        pass
-
     def set_config(self, config):
-        self.pos_thread_timeout = config["pos_timeout"]
-        self.check_threads_timeout = config["check_threads_timeout"]
-        self.gps_checker_thread_timeout = config["gps_check_timeout"]
-        self.gps_thread_timeout = config["gps_timeout"]
+        self.az_calibrate_max_velocity = config["az_calibrate_max_velocity"]
+        self.az_calibrate_min_velocity = config["az_calibrate_min_velocity"]
+
+        self.el_calibrate_max_velocity = config["el_calibrate_max_velocity"]
+        self.el_calibrate_min_velocity = config["el_calibrate_min_velocity"]
+
+        self.az_max_velocity = config["az_max_velocity"]
+        self.az_min_velocity = config["az_min_velocity"]
+
+        self.el_max_velocity = config["el_max_velocity"]
+        self.el_min_velocity = config["el_min_velocity"]
 
         self.az_gps_limit = config["az_lim"]
         self.el_gps_limit = config["el_lim"]
-        self.height_gps_limit = config["el_lim"]
+
+        self.az_re_enter_limit = config["az_re_enter_limit"]
+        self.el_re_enter_limit = config["el_re_enter_limit"]
 
         self.az_range = config["az_range"]
         self.el_range = config["el_range"]
@@ -342,27 +394,10 @@ class Statemachine():
         self.overide_gps_height = config["overide_gps_height"]
 
         self.sig_limit = config["sig_lim"]
+        self.sig_re_enter_limit = config["sig_reenter_lim"]
 
-        self.max_velocity = config["max_velocity"]
-        self.min_velocity = config["min_velocity"]
-
-        self.calibrate_max_velocity = config["calibrate_max_velocity"]
-        self.calibrate_min_velocity = config["calibrate_min_velocity"]
-
-        """
-        self.velocity_igain = config["velocity_igain"]
-        self.velocity_pgain = config["velocity_pgain"]
-
-        self.pos_igain = config["pos_igain"]
-        self.pos_pgain = config["pos_pgain"]
-
-        self.calibrate_velocity_igain = config["calibrate_velocity_igain"]
-        self.calibrate_velocity_pgain = config["calibrate_velocity_pgain"]
-
-        self.calibrate_pos_igain = config["calibrate_pos_igain"]
-        self.calibrate_pos_pgain = config["calibrate_pos_pgain"]
-        """
-
+        self.pos_thread_timeout = config["pos_timeout"]
+        self.check_threads_timeout = config["check_threads_timeout"]
 
     def set_az_pos_limits(self, max, min):
         lim = self.halrcomps["pos-comps"]
@@ -374,20 +409,25 @@ class Statemachine():
         lim.getpin("max_el").set(max)
         lim.getpin("min_el").set(min)
 
-
-    def set_velocity_limits(self, max, min):
+    def set_normal_az_velocity_limits(self):
         vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("max_vel").set(max)
-        vel_comps.getpin("min_vel").set(min)
+        vel_comps.getpin("az_max_vel").set(self.az_max_velocity)
+        vel_comps.getpin("az_min_vel").set(self.az_min_velocity)
 
-    def set_calibrate_velocity(self):
-        #self.set_az_pos_limits(360.0, -360.0)
-        #self.set_el_pos_limits(360.0, -360.0)
+    def set_normal_el_velocity_limits(self):
+        vel_comps = self.halrcomps["vel-comps"]
+        vel_comps.getpin("el_max_vel").set(self.el_max_velocity)
+        vel_comps.getpin("el_min_vel").set(self.el_min_velocity)
 
-        self.set_velocity_limits(self.calibrate_max_velocity, self.calibrate_min_velocity)
+    def set_az_calibrate_velocity_limits(self):
+        vel_comps = self.halrcomps["vel-comps"]
+        vel_comps.getpin("az_max_vel").set(self.az_calibrate_max_velocity)
+        vel_comps.getpin("az_min_vel").set(self.az_calibrate_min_velocity)
 
-    def set_normal_velocity(self):
-        self.set_velocity_limits(self.max_velocity, self.min_velocity)
+    def set_el_calibrate_velocity_limits(self):
+        vel_comps = self.halrcomps["vel-comps"]
+        vel_comps.getpin("el_max_vel").set(self.el_calibrate_max_velocity)
+        vel_comps.getpin("el_min_vel").set(self.el_calibrate_min_velocity)
 
     def reset_az_encoder(self):
         component = self.halrcomps["motor-feedback"]
@@ -397,7 +437,9 @@ class Statemachine():
         az_reset.set(False)
 
     def calibrate_az(self):
-        self.set_calibrate_velocity()
+        self.logger.info("Started calibrating azimuth")
+        self.set_az_pos_limits(self.az_range, -self.az_range)
+        self.set_az_calibrate_velocity_limits()
 
         if self.init_az > 0:
             direction = 1.0
@@ -406,9 +448,10 @@ class Statemachine():
 
         self.send_az_calibrate_pos(direction*self.az_range)
 
-        az_pos = self.wait_for_zero_az()
+        self.moving_az_event.wait(self.moving_timeout)
 
-        self.set_normal_velocity()
+        #Stop 1
+        az_pos = self.wait_for_zero_az()
 
         self.reset_az_encoder()
 
@@ -417,28 +460,43 @@ class Statemachine():
 
         self.send_az_calibrate_pos(opposite_side)
 
+        self.moving_az_event.wait(self.moving_timeout)
+
+        self.set_normal_az_velocity_limits()
+
+        #Stop 2
         temp = self.wait_for_zero_az()
 
-        self.set_calibrate_velocity()
+        self.set_az_calibrate_velocity_limits()
 
         self.send_az_calibrate_pos(self.az_range)
 
+        self.moving_az_event.wait(self.moving_timeout)
+
+        #Stop 3
         total_az_range = self.wait_for_zero_az()
 
-        #TODO move to middle and reset abspos?
+        #Move to middle and reset
         mid = total_az_range/2.0
-        self.send_az_cal_pos(direction*mid)
+        self.send_az_calibrate_pos(direction*mid)
 
+        self.logger.info("Total range: %f" % (total_az_range))
+
+        self.moving_az_event.wait(self.moving_timeout)
+
+        #Stop 4
         temp2 = self.wait_for_zero_az()
+        self.logger.debug(temp2)
+        self.set_state(Override.idle)
 
         self.reset_az_encoder()
-        self.set_az_pos_lims(mid, -mid)
+        self.set_az_pos_limits(mid, -mid)
 
     def calibrate_el(self):
         pass
 
     def calibrate(self):
-        self.set_state(State.calibrating)
+        self.set_state(Override.calibrating)
 
         self.logger.info("Calibrating")
 
@@ -447,9 +505,6 @@ class Statemachine():
         self.calibrate_az()
 
         self.calibrate_el()
-
-        #TODO Want zero pos in the middle right?
-        self.reset_abspos(0.0, 0.0)
 
         self.logger.info("Finished calibrating")
 
@@ -483,54 +538,60 @@ class Statemachine():
         else:
             return State.gps
 
+    def set_tracking_threshold(self):
+        angle_comp = self.halrcomps["set-angle"]
+        angle_comp.getpin("az_angle").set(self.az_gps_limit)
+        angle_comp.getpin("el_angle").set(self.el_gps_limit)
+
+    def set_gps_threshold(self):
+        angle_comp = self.halrcomps["set-angle"]
+        angle_comp.getpin("az_angle").set(self.az_re_enter_limit)
+        angle_comp.getpin("el_angle").set(self.el_re_enter_limit)
+
     def set_state(self, new_state):
         self.state_lock.acquire()
 
-        """
         if isinstance(new_state, Manual):
-            if new_state == Manual.stop_manual:
+            if new_state == Manual.stop:
                 self.state = self.get_tracking_pin_state()
             else:
                 self.state = new_state
-        elif isinstance(new_state, Override):
-            if new_state == Override.stop_override:
+        elif isinstance(new_state, Override) and not isinstance(self.state, Manual):
+            if new_state == Override.stop:
                 self.state = self.get_tracking_pin_state()
-            elif self.state != Override.gps:
+            elif self.state == Override.calibrating and new_state == Override.gps:
+                pass
+            elif self.state == Override.idle and new_state == Override.calibrating:
+                pass
+            elif self.state == Override.gps:
+                pass
+            else:
                 self.state = new_state
         elif not isinstance(self.state, Manual) and not isinstance(self.state, Override):
-            new_state == state
-        """
-        if new_state == State.manual_position or new_state == State.manual_velocity or new_state == state.tracking_override:
-            self.state = new_state
-        elif new_state == State.stop_idle and self.state == State.idle:
-            self.state = self.get_tracking_pin_state()
-        elif new_state == State.stop_overide and self.state == State.gps_overide:
-            self.state = self.get_tracking_pin_state()
-        elif new_state == State.stop_manual and self.state == State.manual:
-            self.state = self.get_tracking_pin_state()
-        elif self.state != State.gps_overide and self.state != State.idle and self.state != State.manual_position and self.state != State.manual_velocity and self.state != State.tracking_override:
             self.state = new_state
 
-        if self.state == State.calibrating:
-            vel_mux = 1
-            gps_mux = 0 #Not relevant
-        elif self.state == State.idle:
-            vel_mux = 0
-            gps_mux = 0 #Not relveant
-        elif self.state == State.tracking or self.state == State.tracking_override:
-            vel_mux = 2
-            gps_mux = 0
-        elif self.state == State.gps or self.state == State.gps_override:
-            vel_mux = 2
-            gps_mux = 1
-        elif self.state == State.manual_position:
+        if self.state == Override.calibrating:
             vel_mux = 2
             gps_mux = 2
-        elif self.state == State.manual_velocity:
-            vel_mux = 3
+        elif self.state == Override.idle:
+            vel_mux = 2
+            gps_mux = 4 #Not relveant
+        elif self.state == State.tracking or self.state == Manual.tracking:
+            vel_mux = 2
+            gps_mux = 0
+            self.set_tracking_threshold()
+        elif self.state == State.gps or self.state == Override.gps:
+            vel_mux = 2
+            gps_mux = 1
+            self.set_gps_threshold()
+        elif self.state == Manual.position:
+            vel_mux = 2
+            gps_mux = 3
+        elif self.state == Manual.velocity:
+            vel_mux = 1
             gps_mux = 0 #Not relevant
         else:
-            self.logger.critical("Unknown state, panic!")
+            self.logger.error("Unknown state, panic!")
             self.state_lock.release()
             return
 
@@ -562,16 +623,14 @@ class Statemachine():
 
         self.pos_thread.stop()
         self.comm_thread.stop()
-        #self.gps_thread.stop()
 
         self.comm_thread.join()
         self.logger.info("Shutdown comm thread")
         self.pos_thread.join()
         self.logger.info("Shutdown pos thread")
-        #self.gps_thread.join()
 
-        shutdown_hal()
         self.sd.stop()
+        shutdown_hal()
         for name, rcomp in self.halrcomps.iteritems():
             rcomp.remove_pins()
             rcomp.set_disconnected()
@@ -585,12 +644,11 @@ class Statemachine():
 
         self.logger.info("Stopped statemachine")
 
-    def run(self, comm_thread, exit_event=None, cleanup_event=None):
+    def run(self, comm_constructor, comm_thread, exit_event=None, cleanup_event=None):
         self.cleanup_event = cleanup_event
 
         self.comm_thread = comm_thread
-        self.comm_func = comm_thread.func
-        self.comm_cleanup = comm_thread.cleanup
+        self.comm_constructor = comm_constructor
         self.comm_thread_timeout = comm_thread.timeout
         self.comm_thread.start()
 
@@ -605,10 +663,6 @@ class Statemachine():
                 if not self.comm_thread.is_alive():
                     self.logger.info("comm thread died, restarting")
                     self.start_comm_thread()
-
-                #if not self.gps_checker_thread.is_alive():
-                #    self.logger.info("Gps checker thread died, restarting")
-                #    self.start_gps_checker_thread()
 
                 #If executed as secondary thread instead of main thread
                 if exit_event:

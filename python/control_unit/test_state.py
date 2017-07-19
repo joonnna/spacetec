@@ -17,70 +17,48 @@ class StateTest(BaseTest):
 
     def test_stay_idle_with_no_client(self):
         self.sm.set_state(State.gps)
-        self.assertEqual(self.sm.get_state(), State.idle)
-
-        self.sm.set_state(State.gps_overide)
-        self.assertEqual(self.sm.get_state(), State.idle)
-
-        self.sm.set_state(State.stop_overide)
-        self.assertEqual(self.sm.get_state(), State.idle)
+        self.assertEqual(self.sm.get_state(), Override.idle)
 
         self.sm.set_state(State.tracking)
-        self.assertEqual(self.sm.get_state(), State.idle)
+        self.assertEqual(self.sm.get_state(), Override.idle)
 
-        self.sm.set_state(State.calibrating)
-        self.assertEqual(self.sm.get_state(), State.idle)
+        self.sm.set_state(Override.calibrating)
+        self.assertEqual(self.sm.get_state(), Override.idle)
 
-        self.sm.set_state(State.idle)
-        self.assertEqual(self.sm.get_state(), State.idle)
+        self.assertEqual(self.sm.get_state(), Override.idle)
 
         #Needed for exiting all threads, comm stuck on recv
         self.start_client()
 
     def test_exit_idle_state_on_udp_recieve(self):
-        self.assertEqual(self.sm.get_state(), State.idle)
+        self.assertEqual(self.sm.get_state(), Override.idle)
 
         self.start_client()
 
         time.sleep(self.update_timeout)
 
-        self.assertNotEqual(self.sm.get_state(), State.idle)
+        self.assertNotEqual(self.sm.get_state(), Override.idle)
+
 
     def test_gps_overide(self):
         self.start_client(self.low_height)
 
         time.sleep(self.update_timeout)
 
-        self.assertEqual(self.sm.get_state(), State.gps_overide)
+        self.assertEqual(self.sm.get_state(), Override.gps)
 
-        self.change_to_all_states(State.gps_overide)
+        self.change_to_all_states(Override.gps)
 
-        self.sm.set_state(State.stop_overide)
-        self.assertNotEqual(self.sm.get_state(), State.gps_overide)
+        self.sm.set_state(Override.stop)
+        self.assertNotEqual(self.sm.get_state(), Override.gps)
+
 
     def test_high_height_no_gps_overide(self):
         self.start_client(self.high_height)
 
         time.sleep(self.update_timeout)
 
-        self.assertNotEqual(self.sm.get_state(), State.gps_overide)
-
-
-    def change_to_all_states(self, state):
-        self.sm.set_state(State.gps)
-        self.assertEqual(self.sm.get_state(), state)
-
-        self.sm.set_state(State.gps_overide)
-        self.assertEqual(self.sm.get_state(), state)
-
-        self.sm.set_state(State.tracking)
-        self.assertEqual(self.sm.get_state(), state)
-
-        self.sm.set_state(State.calibrating)
-        self.assertEqual(self.sm.get_state(), state)
-
-        self.sm.set_state(State.idle)
-        self.assertEqual(self.sm.get_state(), state)
+        self.assertNotEqual(self.sm.get_state(), Override.gps)
 
 if __name__ == '__main__':
     unittest.main()

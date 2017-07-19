@@ -1,43 +1,58 @@
 from udpComm.server import *
 from udpComm.client import *
 import thread
+import threading
 import unittest
 
 class CommTest(unittest.TestCase):
 
     def setUp(self):
-        self.datalength = 200
+        self.datalength = 199
+
+        self.exit_event = threading.Event()
 
         self.client = Udpclient()
         self.comm = Communication()
 
+        thread.start_new_thread(self.client.run, (None, self.exit_event))
+
     def tearDown(self):
+        self.client.shutdown()
+        self.exit_event.wait()
         self.comm.shutdown()
 
     def test_recv_ptu_data(self):
-        ptudata = open("ptudata", "r")
+        path = "/home/machinekit/machinekit/spacetec/data_files/low_height"
+        ptudata = open(path, "r")
         file_data = ptudata.read()
+        ptudata.close()
         lines = file_data.split("\n")
 
-        data = lines[10]
+        data = lines[0]
         self.assertEqual(len(data), self.datalength)
 
         pos = extract_pos(data)
 
-        self.thread = thread.start_new_thread(self.client.run, (data,))
+        self.thread = thread.start_new_thread(self.client.run, (path, self.exit_event))
 
         received_pos = self.comm._receive_data()
 
         for idx, var in enumerate(pos):
             self.assertEqual(var, received_pos[idx])
 
-
     #TODO Don't know expected output...
     def test_calc_pos(self):
-        pass
+        long = 18.968714
+        lat = 69.661945
+        height = 500.0
 
-    def test_gps_input(self):
-        self.comm.get_local_gps_pos()
+        ret = self.comm._calc_pos((long, lat, height))
+
+        self.assertEqual(90.90211498768772, ret[0])
+        self.assertEqual(21.533795781599938, ret[1])
+
+ #   def test_gps_input(self):
+  #      self.comm.get_local_gps_pos()
 
 
 def extract_pos(data):

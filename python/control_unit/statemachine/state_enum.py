@@ -2,15 +2,17 @@ from enum import Enum
 import socket
 
 class State(Enum):
-    calibrating = 0
-    idle = 1
-    tracking = 2
+    tracking = 0
+    gps = 1
+
+class Override(Enum):
+    stop = 0
+    calibrating = 1
+    idle = 2
     gps = 3
-    gps_overide = 4
-    stop_overide = 5
-    stop_idle = 6
-    manual_position = 7
-    manual_velocity = 8
-    stop_manual = 9
-    tracking_override = 10
-    stop_tracking_override = 11
+
+class Manual(Enum):
+    stop = 0
+    position = 1
+    velocity = 2
+    tracking = 3

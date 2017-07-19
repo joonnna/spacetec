@@ -10,9 +10,11 @@ class SystemTest(BaseTest):
         comm = Communication()
 
         self.thread1 = new_thread(comm.run, comm.shutdown, 0.0, self.sm.send_gps_pos)
-        self.thread2 = new_thread(comm.get_local_gps_pos, comm.gps_cleanup, 10.0)
 
-        self.client = True
+        self.sm.halrcomps["test-set-angle"].getpin("az_angle").set(10000000.0)
+        self.sm.halrcomps["test-set-angle"].getpin("el_angle").set(10000000.0)
+
+        self.start_client()
 
     def test_input_output(self):
         self.sm.halrcomps["rrssi"].getpin("out").set(self.sm.sig_limit + 1.0)
@@ -27,7 +29,6 @@ class SystemTest(BaseTest):
 
         val0 = out0.get()
         val1 = out1.get()
-        print val0, val1
 
         if val0 != 0.0:
             self.assertNotEqual(val0, 0.0)
@@ -38,7 +39,10 @@ class SystemTest(BaseTest):
 
     def test_gps_output(self):
         low_sig = self.sm.sig_limit - 1.0
-        self.set_rssi_and_wait(low_sig)
+
+        self.sm.halrcomps["rrssi"].getpin("out").set(low_sig)
+
+        time.sleep(3)
 
         out0 = self.sm.halrcomps["rbldc0"].getpin("in")
         out0.on_value_changed.append(self.wait_callback)
@@ -50,7 +54,6 @@ class SystemTest(BaseTest):
 
         val0 = out0.get()
         val1 = out1.get()
-        print val0, val1
 
         if val0 != 0.0:
             self.assertNotEqual(val0, 0.0)
@@ -61,7 +64,10 @@ class SystemTest(BaseTest):
 
     def test_alternation(self):
         sig = 10.0
-        self.set_rssi_and_wait(sig)
+
+        self.sm.halrcomps["rrssi"].getpin("out").set(sig)
+
+        time.sleep(3)
 
         checker = self.sm.halrcomps["check-step"]
         az_in = checker.getpin("az_in").get()
@@ -73,7 +79,6 @@ class SystemTest(BaseTest):
             self.assertNotEqual(az_in, -1.0)
         else:
             self.assertFalse(True)
-
  #   def test_idle_until_udp(self):
 
 
@@ -94,15 +99,6 @@ class SystemTest(BaseTest):
         pass
     """
 
-    def set_rssi_and_wait(self, val):
-        self.sm.halrcomps["rrssi"].getpin("out").set(val)
-
-        state = self.sm.halrcomps["rsigcheck"].getpin("in")
-        state.on_value_changed.append(self.wait_callback)
-
-        self.wait()
-
-        self.clear()
 
 if __name__ == '__main__':
     unittest.main()
