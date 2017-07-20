@@ -45,8 +45,8 @@ class Statemachine():
         az = pos[0]
         el = pos[1]
 
-        az = 0
-        el = 0
+        #az = 0
+        #el = 0
 
         self.init_az = az
         self.init_el = el
@@ -58,8 +58,10 @@ class Statemachine():
         self.initrcomps(testing)
         self._search_and_bind()
 
-        #self.set_velocity_limits(500.0, -500.0)
-        #self.set_az_pos_limits(self.az_range, -self.az_range)
+        p = self.halrcomps["pwm"].getpin("az")
+        p.set(True)
+        self.busy_wait(p)
+
         self.logger.info("Waiting for bldc init")
         self.wait_for_init()
         self.logger.info("Bldc init done!")
@@ -75,26 +77,26 @@ class Statemachine():
         gps_mux.newpin("az_calibration", halremote.HAL_FLOAT, halremote.HAL_OUT)
         gps_mux.newpin("el_gps", halremote.HAL_FLOAT, halremote.HAL_OUT)
         gps_mux.newpin("el_calibration", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        gps_mux.no_create = True
+        #gps_mux.no_create = True
 
         vel_mux = halremote.RemoteComponent("velmux", debug=False)
         vel_mux.newpin("az_sel", halremote.HAL_S32, halremote.HAL_OUT)
         vel_mux.newpin("el_sel", halremote.HAL_S32, halremote.HAL_OUT)
-        vel_mux.no_create = True
+        #vel_mux.no_create = True
 
         abspos = halremote.RemoteComponent("abspos", debug=False)
         abspos.newpin("az_reset", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos.newpin("az_in", halremote.HAL_FLOAT, halremote.HAL_IN)
         abspos.newpin("el_reset", halremote.HAL_FLOAT, halremote.HAL_OUT)
         abspos.newpin("el_in", halremote.HAL_FLOAT, halremote.HAL_IN)
-        abspos.no_create = True
+        #abspos.no_create = True
 
         tracking = halremote.RemoteComponent("step", debug=False)
         track = tracking.newpin("track", halremote.HAL_BIT, halremote.HAL_IN)
         manual = tracking.newpin("manual", halremote.HAL_S32, halremote.HAL_IN)
         manual.on_value_changed.append(self.manual_state_callback)
         track.on_value_changed.append(self.check_gps)
-        tracking.no_create = True
+        #tracking.no_create = True
 
         pos_comps = halremote.RemoteComponent("pos-comps", debug=False)
         pos_comps.newpin("max_az", halremote.HAL_FLOAT, halremote.HAL_IO)
@@ -103,7 +105,7 @@ class Statemachine():
         pos_comps.newpin("min_el", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.newpin("az_diff", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.newpin("el_diff", halremote.HAL_FLOAT, halremote.HAL_IO)
-        pos_comps.no_create = True
+        #pos_comps.no_create = True
 
         motor_feedback = halremote.RemoteComponent("motor-feedback", debug=False)
         zero_az = motor_feedback.newpin("zero_az", halremote.HAL_BIT, halremote.HAL_IN)
@@ -121,13 +123,20 @@ class Statemachine():
 
         zero_az.on_value_changed.append(self.zero_az_callback)
         zero_el.on_value_changed.append(self.zero_el_callback)
-        motor_feedback.no_create = True
+        #motor_feedback.no_create = True
 
         gps_angle_check = halremote.RemoteComponent("set-angle", debug=False)
         gps_angle_check.newpin("az_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
         gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
-        gps_angle_check.no_create = True
+        #gps_angle_check.no_create = True
 
+        pwm = halremote.RemoteComponent("pwm", debug=False)
+        pwm_az = pwm.newpin("az", halremote.HAL_BIT, halremote.HAL_OUT)
+        pwm.newpin("el", halremote.HAL_BIT, halremote.HAL_OUT)
+        #pwm_az.on_synced_changed.append(self.test_sync)
+        #pwm.no_create = True
+
+        self.halrcomps[pwm.name] = pwm
         self.halrcomps[gps_angle_check.name] = gps_angle_check
         self.halrcomps[motor_feedback.name] = motor_feedback
         self.halrcomps[pos_comps.name] = pos_comps
@@ -170,6 +179,42 @@ class Statemachine():
             self.halrcomps[bldc0.name] = bldc0
             self.halrcomps[bldc1.name] = bldc1
 
+    def busy_wait(self, pin):
+        while not pin.synced:
+            time.sleep(0.1)
+
+    def test_sync(self, val):
+        self.logger.debug("JADA!!!!! %s" % (val))
+
+    def disable_az_pwm(self):
+        pin = self.halrcomps["pwm"].getpin("az")
+        pin.set(False)
+        self.busy_wait(pin)
+        #pin.set(False)
+
+        #while not pin.wait_synced(1.0):
+        #    self.logger.debug("Waiting for disabled sync")
+
+    def enable_az_pwm(self):
+        pin = self.halrcomps["pwm"].getpin("az")
+        pin.set(True)
+        self.busy_wait(pin)
+        #pin.set(True)
+        #self.logger.debug("Waiting for enabled sync")
+        #pin.wait_synced()
+
+    def disable_el_pwm(self):
+        self.halrcomps["pwm"].getpin("el").set(False)
+
+    def disable_el_pwm(self):
+        self.halrcomps["pwm"].getpin("el").set(True)
+
+
+    def rcomp_disconnected(self, val):
+        if val:
+            self.logger.debug("guuuuuci")
+        else:
+            self.logger.debug("KA I FAEEEEEEN")
 
     def az_calibration_velocity_callback(self, val):
         if val:
@@ -207,8 +252,12 @@ class Statemachine():
             self.zero_el_event.clear()
 
     def wait_for_init(self):
-        self.halrcomps["motor-feedback"].getpin("az_init_start").set(True)
+        pin = self.halrcomps["motor-feedback"].getpin("az_init_start")
+        pin.set(True)
+        self.busy_wait(pin)
+        self.logger.info("Waiting for physical bldc init to be start")
         self.az_init_event.wait()
+        #self.az_init_event.wait()
 
     def wait_for_zero_az(self):
         self.logger.info("Waiting for zero az velocity")
@@ -251,12 +300,20 @@ class Statemachine():
         self.logger.info("Started service discovery")
         self.sd.start()
 
+        timeout = 5.0
+
         for name, rcomp in self.halrcomps.iteritems():
             self.logger.debug("bound : %s" % (name))
+            rcomp.on_connected_changed.append(self.rcomp_disconnected)
             rcomp.bind_component()
 
         for name, rcomp in self.halrcomps.iteritems():
-            rcomp.wait_connected()
+            while not rcomp.wait_connected(timeout):
+                self.logger.info("%s is not connected, waiting..." % (rcomp.name))
+                #if not rcomp.connected:
+                #    rcomp.bind_component()
+
+            self.logger.info("%s is connected" % (name))
 
 
         self.logger.info("Bound all remote HAL components")
@@ -395,43 +452,28 @@ class Statemachine():
         self.az_normal_diff = config["normal_diff"]
 
     def set_az_pos_limits(self, max, min):
-        lim = self.halrcomps["pos-comps"]
-        lim.getpin("max_az").set(max)
-        lim.getpin("min_az").set(min)
+        max_pin = self.halrcomps["pos-comps"].getpin("max_az")
+        min_pin = self.halrcomps["pos-comps"].getpin("min_az")
+        max_pin.set(max)
+        min_pin.set(min)
+        self.busy_wait(max_pin)
+        self.busy_wait(min_pin)
 
     def set_el_pos_limits(self, max, min):
         lim = self.halrcomps["pos-comps"]
         lim.getpin("max_el").set(max)
         lim.getpin("min_el").set(min)
-
-    """
-    def set_normal_az_velocity_limits(self):
-        vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("az_max_vel").set(self.az_max_velocity)
-        vel_comps.getpin("az_min_vel").set(self.az_min_velocity)
-
-    def set_normal_el_velocity_limits(self):
-        vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("el_max_vel").set(self.el_max_velocity)
-        vel_comps.getpin("el_min_vel").set(self.el_min_velocity)
-
-    def set_az_calibrate_velocity_limits(self):
-        vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("az_max_vel").set(self.az_calibrate_max_velocity)
-        vel_comps.getpin("az_min_vel").set(self.az_calibrate_min_velocity)
-
-    def set_el_calibrate_velocity_limits(self):
-        vel_comps = self.halrcomps["vel-comps"]
-        vel_comps.getpin("el_max_vel").set(self.el_calibrate_max_velocity)
-        vel_comps.getpin("el_min_vel").set(self.el_calibrate_min_velocity)
-    """
+        self.busy_wait(lim)
 
     def set_az_calibration_diff(self):
-        self.halrcomps["pos-comps"].getpin("az_diff").set(self.az_calibration_diff)
+        pin = self.halrcomps["pos-comps"].getpin("az_diff")
+        pin.set(self.az_calibration_diff)
+        self.busy_wait(pin)
 
     def set_az_normal_diff(self):
-        self.halrcomps["pos-comps"].getpin("az_diff").set(self.az_normal_diff)
-
+        pin = self.halrcomps["pos-comps"].getpin("az_diff")
+        pin.set(self.az_normal_diff)
+        self.busy_wait(pin)
 
     def reset_az_encoder(self):
         component = self.halrcomps["motor-feedback"]
@@ -442,56 +484,64 @@ class Statemachine():
 
     def calibrate_az(self):
         self.logger.info("Started calibrating azimuth")
-        self.set_az_pos_limits(self.az_range, -self.az_range)
         self.set_az_calibration_diff()
 
         if self.init_az > 0:
-            direction = 1.0
-        else:
             direction = -1.0
+            self.logger.info("Positive antenna previous directon, starting motor negative")
+        else:
+            direction = 1.0
+            self.logger.info("Negative antenna previous directon, starting motor positive")
 
-        self.send_az_calibrate_pos(direction*self.az_range)
+        target_pos = direction * self.az_range
+        self.logger.info("Target position : %f" % (target_pos))
 
-        self.moving_az_event.wait(self.moving_timeout)
+        self.send_az_calibrate_pos(target_pos)
+
+        self.moving_az_event.wait()
 
         #Stop 1
         az_pos = self.wait_for_zero_az()
+        self.logger.info("Found first endpoint: %f" % (az_pos))
+        self.disable_az_pwm()
+        self.logger.info("Disabled pwm")
 
         self.set_az_normal_diff()
         self.reset_az_encoder()
+        self.logger.info("Reset encoder")
 
-        #10 degrees, want to go the last ones slow
-        opposite_side = -direction * (self.az_range - 10)
-
+        opposite_side = -direction * self.az_range
+        self.logger.info("opposite side : %f" % (opposite_side))
         self.send_az_calibrate_pos(opposite_side)
 
-        self.moving_az_event.wait(self.moving_timeout)
+        self.enable_az_pwm()
+        self.logger.info("Enabled pwm")
+
+        time.sleep(3)
+
+        self.moving_az_event.wait()
 
         #Stop 2
-        temp = self.wait_for_zero_az()
-
-        self.send_az_calibrate_pos(self.az_range)
-
-        self.moving_az_event.wait(self.moving_timeout)
-
-        #Stop 3
-        total_az_range = self.wait_for_zero_az()
+        total_az_range = abs(self.wait_for_zero_az())
+        self.logger.info("Found second endpoint total range: %f" % (total_az_range))
 
         #Move to middle and reset
         mid = total_az_range/2.0
         self.send_az_calibrate_pos(direction*mid)
 
-        self.logger.info("Total range: %f" % (total_az_range))
+        self.moving_az_event.wait()
 
-        self.moving_az_event.wait(self.moving_timeout)
-
-        #Stop 4
+        #Stop 3
         temp2 = self.wait_for_zero_az()
-        self.logger.debug(temp2)
+        self.logger.info("Found mid point: %f" % (temp2))
+        self.disable_az_pwm()
+
         self.set_state(Override.idle)
 
         self.reset_az_encoder()
         self.set_az_pos_limits(mid, -mid)
+
+        self.enable_az_pwm()
 
     def calibrate_el(self):
         pass
@@ -596,11 +646,20 @@ class Statemachine():
             self.state_lock.release()
             return
 
-        self.halrcomps["velmux"].getpin("az_sel").set(vel_mux)
-        self.halrcomps["velmux"].getpin("el_sel").set(vel_mux)
+        p1 = self.halrcomps["velmux"].getpin("az_sel")
+        p1.set(vel_mux)
+        p2 = self.halrcomps["velmux"].getpin("el_sel")
+        p2.set(vel_mux)
 
-        self.halrcomps["gpsmux"].getpin("az_sel").set(gps_mux)
-        self.halrcomps["gpsmux"].getpin("el_sel").set(gps_mux)
+        p3 = self.halrcomps["gpsmux"].getpin("az_sel")
+        p3.set(gps_mux)
+        p4 = self.halrcomps["gpsmux"].getpin("el_sel")
+        p4.set(gps_mux)
+
+        self.busy_wait(p1)
+        self.busy_wait(p2)
+        self.busy_wait(p3)
+        self.busy_wait(p4)
 
         self.logger.info("Entered %s state" % (self.state.name))
         self.state_lock.release()
