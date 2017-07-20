@@ -80,8 +80,6 @@ class Statemachine():
         vel_mux = halremote.RemoteComponent("velmux", debug=False)
         vel_mux.newpin("az_sel", halremote.HAL_S32, halremote.HAL_OUT)
         vel_mux.newpin("el_sel", halremote.HAL_S32, halremote.HAL_OUT)
-        #vel_mux.newpin("az_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
-        #vel_mux.newpin("el_out", halremote.HAL_FLOAT, halremote.HAL_OUT)
         vel_mux.no_create = True
 
         abspos = halremote.RemoteComponent("abspos", debug=False)
@@ -98,19 +96,14 @@ class Statemachine():
         track.on_value_changed.append(self.check_gps)
         tracking.no_create = True
 
-        pos_comps= halremote.RemoteComponent("pos-comps", debug=False)
+        pos_comps = halremote.RemoteComponent("pos-comps", debug=False)
         pos_comps.newpin("max_az", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.newpin("min_az", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.newpin("max_el", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.newpin("min_el", halremote.HAL_FLOAT, halremote.HAL_IO)
+        pos_comps.newpin("az_diff", halremote.HAL_FLOAT, halremote.HAL_IO)
+        pos_comps.newpin("el_diff", halremote.HAL_FLOAT, halremote.HAL_IO)
         pos_comps.no_create = True
-
-        vel_comps = halremote.RemoteComponent("vel-comps", debug=False)
-        vel_comps.newpin("az_max_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
-        vel_comps.newpin("az_min_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
-        vel_comps.newpin("el_max_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
-        vel_comps.newpin("el_min_vel", halremote.HAL_FLOAT, halremote.HAL_IO)
-        vel_comps.no_create = True
 
         motor_feedback = halremote.RemoteComponent("motor-feedback", debug=False)
         zero_az = motor_feedback.newpin("zero_az", halremote.HAL_BIT, halremote.HAL_IN)
@@ -138,7 +131,6 @@ class Statemachine():
         self.halrcomps[gps_angle_check.name] = gps_angle_check
         self.halrcomps[motor_feedback.name] = motor_feedback
         self.halrcomps[pos_comps.name] = pos_comps
-        self.halrcomps[vel_comps.name] = vel_comps
         self.halrcomps[tracking.name] = tracking
         self.halrcomps[gps_mux.name] = gps_mux
         self.halrcomps[vel_mux.name] = vel_mux
@@ -399,6 +391,9 @@ class Statemachine():
         self.pos_thread_timeout = config["pos_timeout"]
         self.check_threads_timeout = config["check_threads_timeout"]
 
+        self.az_calibration_diff = config["calibration_diff"]
+        self.az_normal_diff = config["normal_diff"]
+
     def set_az_pos_limits(self, max, min):
         lim = self.halrcomps["pos-comps"]
         lim.getpin("max_az").set(max)
@@ -409,6 +404,7 @@ class Statemachine():
         lim.getpin("max_el").set(max)
         lim.getpin("min_el").set(min)
 
+    """
     def set_normal_az_velocity_limits(self):
         vel_comps = self.halrcomps["vel-comps"]
         vel_comps.getpin("az_max_vel").set(self.az_max_velocity)
@@ -428,6 +424,14 @@ class Statemachine():
         vel_comps = self.halrcomps["vel-comps"]
         vel_comps.getpin("el_max_vel").set(self.el_calibrate_max_velocity)
         vel_comps.getpin("el_min_vel").set(self.el_calibrate_min_velocity)
+    """
+
+    def set_az_calibration_diff(self):
+        self.halrcomps["pos-comps"].getpin("az_diff").set(self.az_calibration_diff)
+
+    def set_az_normal_diff(self):
+        self.halrcomps["pos-comps"].getpin("az_diff").set(self.az_normal_diff)
+
 
     def reset_az_encoder(self):
         component = self.halrcomps["motor-feedback"]
@@ -439,7 +443,7 @@ class Statemachine():
     def calibrate_az(self):
         self.logger.info("Started calibrating azimuth")
         self.set_az_pos_limits(self.az_range, -self.az_range)
-        self.set_az_calibrate_velocity_limits()
+        self.set_az_calibration_diff()
 
         if self.init_az > 0:
             direction = 1.0
@@ -453,6 +457,7 @@ class Statemachine():
         #Stop 1
         az_pos = self.wait_for_zero_az()
 
+        self.set_az_normal_diff()
         self.reset_az_encoder()
 
         #10 degrees, want to go the last ones slow
@@ -462,12 +467,8 @@ class Statemachine():
 
         self.moving_az_event.wait(self.moving_timeout)
 
-        self.set_normal_az_velocity_limits()
-
         #Stop 2
         temp = self.wait_for_zero_az()
-
-        self.set_az_calibrate_velocity_limits()
 
         self.send_az_calibrate_pos(self.az_range)
 

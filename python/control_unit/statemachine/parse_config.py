@@ -39,5 +39,7 @@ def read_config():
     dict["pos_timeout"] = config.getfloat("THREAD_TIMEOUTS", "POS_THREAD")
     dict["check_threads_timeout"] = config.getfloat("THREAD_TIMEOUTS", "CHECK_THREADS")
 
+    dict["calibration_diff"] = config.getfloat("NEAR_ENDSTOP_VALUES", "CALIBRATION_DIFF")
+    dict["normal_diff"] = config.getfloat("NEAR_ENDSTOP_VALUES", "NORMAL_DIFF")
 
     return dict

@@ -1,0 +1,19 @@
+component set_velocity "Sets velocity limits according to position";
+pin in bit in;
+pin io float max;
+pin io float min;
+param rw float calibration;
+param rw float normal;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+if (in)
+{
+    max  = calibration;
+    min  = -calibration;
+}
+else
+{
+    max  = normal;
+    min  = -normal;
+}

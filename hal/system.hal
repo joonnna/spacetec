@@ -9,12 +9,14 @@ loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
 loadrt bldc cfg=q,q #Probably wrong config
-loadrt scale count=10
+loadrt scale count=16
 loadrt sigcheck
+loadrt abs count=2
 loadrt steptrack count=2
-loadrt lowpass
-loadrt near count=4
+loadrt near count=6
+loadrt set_velocity count=2
 loadrt and2 names=angle_and,state_and
+
 
 ###########################
 #BLDC/HOSTMOT CONFIG START#
@@ -37,16 +39,26 @@ net scale_3-to-pwmgen_04 scale.7.out => hm2_de0n.0.pwmgen.03.value
 net scale_4-to-pwmgen_05 scale.8.out => hm2_de0n.0.pwmgen.04.value
 net scale_5-to-pwmgen_06 scale.9.out => hm2_de0n.0.pwmgen.05.value
 
-net encoder.0.pos-to-scale hm2_de0n.0.encoder.00.position scale.0.in
-net encoder.1.pos-to-scale hm2_de0n.0.encoder.01.position scale.2.in
+net encoder.0.pos-to-scale-to-abs hm2_de0n.0.encoder.00.position scale.0.in abs.0.in
+net encoder.1.pos-to-scale-to-abs hm2_de0n.0.encoder.01.position scale.2.in abs.1.in
 
 net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcounts
 net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
-net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity vpid.0.feedback near.0.in1
-net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity vpid.1.feedback near.1.in2
-#net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity vpid.1.feedback near.4.in1
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity scale.10.in near.0.in1
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity scale.11.in near.1.in2
 
+net scale-to-vpid.0 scale.10.out vpid.0.feedback
+net scale-to-vpid.1 scale.11.out vpid.1.feedback
+
+setp scale.10.gain [GEAR_SCALES]AZ
+setp scale.11.gain [GEAR_SCALES]EL
+
+setp scale.12.gain [GEAR_SCALES]AZ
+setp scale.13.gain [GEAR_SCALES]EL
+
+setp scale.14.gain [GEAR_SCALES]AZ
+setp scale.15.gain [GEAR_SCALES]EL
 
 setp hm2_de0n.0.pwmgen.00.enable TRUE
 setp hm2_de0n.0.pwmgen.01.enable TRUE
@@ -143,14 +155,10 @@ newpin pos-comps pos-comps.max_az float io
 newpin pos-comps pos-comps.min_az float io
 newpin pos-comps pos-comps.max_el float io
 newpin pos-comps pos-comps.min_el float io
+newpin pos-comps pos-comps.az_diff float io
+newpin pos-comps pos-comps.el_diff float io
 ready pos-comps
 
-newcomp vel-comps
-newpin vel-comps vel-comps.az_max_vel float io
-newpin vel-comps vel-comps.az_min_vel float io
-newpin vel-comps vel-comps.el_max_vel float io
-newpin vel-comps vel-comps.el_min_vel float io
-ready vel-comps
 
 newcomp motor-feedback
 newpin motor-feedback motor-feedback.zero_az bit in
@@ -199,6 +207,27 @@ setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 setp near.0.difference [NEAR_ZERO]DIFF
 setp near.1.difference [NEAR_ZERO]DIFF
 
+setp set-velocity.0.calibration [NEAR_ENDSTOP_VALUES]TEST_VELOCITY
+setp set-velocity.1.calibration [NEAR_ENDSTOP_VALUES]TEST_VELOCITY
+
+setp set-velocity.0.normal [AZ_VEL_LIMITS]MAX
+setp set-velocity.1.normal [EL_VEL_LIMITS]MAX
+
+net abs-to-near.0 abs.0.out near.4.in1
+net abs-to-near.1 abs.1.out near.5.in1 
+
+net near-to-set-vel.0 near.4.out set-velocity.0.in
+net near-to-set-vel.1 near.5.out set-velocity.1.in
+
+net python-to-near-diff.0 pos-comps.az_diff near.4.difference
+net python-to-near-diff.1 pos-comps.el_diff near.5.difference
+
+net set-az_max-to-vlim set-velocity.0.max vlim.0.max
+net set-az_min-to-vlim set-velocity.0.min vlim.0.min
+
+net set-el_max-to-vlim set-velocity.1.max vlim.1.max
+net set-el_min-to-vlim set-velocity.1.min vlim.1.min
+
 #############################
 #ANGLE/SIGNAL THRESHOLDS END#
 #############################
@@ -220,12 +249,12 @@ setp bldc-lim.0.min -1.0
 setp bldc-lim.1.max 1.0
 setp bldc-lim.1.min -1.0
 
-setp vlim.0.max [AZ_VEL_LIMITS]MAX
-setp vlim.0.min [AZ_VEL_LIMITS]MIN
+#setp vlim.0.max [AZ_VEL_LIMITS]MAX
+#setp vlim.0.min [AZ_VEL_LIMITS]MIN
 setp vlim.0.maxv [AZ_VEL_LIMITS]MAX_V
 
-setp vlim.1.max [EL_VEL_LIMITS]MAX
-setp vlim.1.min [EL_VEL_LIMITS]MIN
+#setp vlim.1.max [EL_VEL_LIMITS]MAX
+#setp vlim.1.min [EL_VEL_LIMITS]MIN
 setp vlim.1.maxv [EL_VEL_LIMITS]MAX_V
 
 setp plim.0.max [AZ_POS_LIMITS]MAX
@@ -258,17 +287,17 @@ setp ppid.1.Igain [EL_POS_PID]IGAIN
 setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
 setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
 
-net max_az.0 pos-comps.max_az plim.0.max
+net max_az.0 pos-comps.max_az plim.0.max near.4.in2
 net min_az.0 pos-comps.min_az plim.0.min
 
-net max_el.1 pos-comps.max_el plim.1.max
+net max_el.1 pos-comps.max_el plim.1.max near.5.in2
 net min_el.1 pos-comps.min_el plim.1.min
 
-net az_max_vel vel-comps.az_max_vel vlim.0.max
-net az_min_vel vel-comps.az_min_vel vlim.0.min
+#net az_max_vel vel-comps.az_max_vel vlim.0.max
+#net az_min_vel vel-comps.az_min_vel vlim.0.min
 
-net el_max_vel vel-comps.el_max_vel vlim.1.max
-net el_min_vel vel-comps.el_min_vel vlim.1.min
+#net el_max_vel vel-comps.el_max_vel vlim.1.max
+#net el_min_vel vel-comps.el_min_vel vlim.1.min
 
 ####################
 #LIM/PID VALUES END#
@@ -279,14 +308,20 @@ net el_min_vel vel-comps.el_min_vel vlim.1.min
 #SYSTEM FLOW START#
 ###################
 
-net mux-to-plim.0 muxn.0.out plim.0.in
-net mux-to-plim.1 muxn.1.out plim.1.in
+net mux-to-scale.0 muxn.0.out scale.12.in
+net mux-to-scale.1 muxn.1.out scale.13.in
+
+net scale-to-plim.0 scale.12.out plim.0.in
+net scale-to-plim.1 scale.13.out plim.1.in
 
 net plim-to-ppid.0 plim.0.out ppid.0.command
 net plim-to-ppid.1 plim.1.out ppid.1.command
 
-net abs-to-ppid-step.0 scale.1.out ppid.0.feedback steptrack.0.in1 motor-feedback.az_pos
-net abs-to-ppid-step.1 scale.3.out ppid.1.feedback steptrack.1.in1 motor-feedback.el_pos
+net abs-to-step-to-motor-feedback.0 scale.1.out steptrack.0.in1 motor-feedback.az_pos scale.14.in
+net abs-to-step-to-motor-feedback.1 scale.3.out steptrack.1.in1 motor-feedback.el_pos scale.15.in
+
+net scale-to-ppid.0 scale.14.out ppid.0.feedback
+net scale-to-ppid.1 scale.15.out ppid.1.feedback
 
 net ppid-to-vmux.0 ppid.0.output vmuxn.0.in2
 net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
@@ -303,9 +338,7 @@ net vpid-to-bldc-lim.1 vpid.1.output bldc-lim.1.in
 net lim-to-bldc.0 bldc-lim.0.out bldc.0.value
 net lim-to-bldc.1 bldc-lim.1.out bldc.1.value
 
-net filter-to-sigcheck lowpass.0.out sigcheck.0.in
-
-net rssi-reader-to-filter rssi-reader.value lowpass.0.in
+net rssi-reader-to-sigcheck rssi-reader.value sigcheck.0.in
 
 net sigcheck-to-step.0 sigcheck.0.out0 steptrack.0.in0
 net sigcheck-to-step.1 sigcheck.0.out1 steptrack.1.in0
@@ -358,13 +391,10 @@ setp scale.3.gain 1
 setp scale.1.offset [COMPASS_OFFSET]AZ_OFFSET
 setp scale.3.offset [COMPASS_OFFSET]EL_OFFSET
 
-setp lowpass.0.gain 1
-
 #################
 #FUNCTIONS START#
 #################
 
-addf lowpass.0 slow_thread
 addf sigcheck.0 slow_thread
 
 addf near.0 slow_thread
@@ -407,6 +437,14 @@ addf ppid.1.do-pid-calcs fast_thread
 addf bldc-lim.0 fast_thread
 addf bldc-lim.1 fast_thread
 
+addf near.4 fast_thread
+addf near.5 fast_thread
+
+addf abs.0 fast_thread
+addf abs.1 fast_thread
+
+addf set-velocity.0 fast_thread
+addf set-velocity.1 fast_thread
 
 addf scale.0 fast_thread
 addf scale.1 fast_thread
@@ -418,6 +456,13 @@ addf scale.6 fast_thread
 addf scale.7 fast_thread
 addf scale.8 fast_thread
 addf scale.9 fast_thread
+
+addf scale.10 fast_thread
+addf scale.11 fast_thread
+addf scale.12 fast_thread
+addf scale.13 fast_thread
+addf scale.14 fast_thread
+addf scale.15 fast_thread
 
 ###############
 #FUNCTIONS END#
