@@ -37,22 +37,17 @@ class CommTest(unittest.TestCase):
 
         received_pos = self.comm._receive_data()
 
-        for idx, var in enumerate(pos):
-            self.assertEqual(var, received_pos[idx])
 
     #TODO Don't know expected output...
     def test_calc_pos(self):
         long = 18.968714
         lat = 69.661945
-        height = 500.0
+        height = 50000.0
 
         ret = self.comm._calc_pos((long, lat, height))
 
-        self.assertEqual(90.90211498768772, ret[0])
-        self.assertEqual(21.533795781599938, ret[1])
-
- #   def test_gps_input(self):
-  #      self.comm.get_local_gps_pos()
+        self.assertEqual(69.05233049335735, ret[0])
+        self.assertEqual(21.577413283839867, ret[1])
 
 
 def extract_pos(data):

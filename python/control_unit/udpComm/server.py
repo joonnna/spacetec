@@ -94,16 +94,9 @@ class Communication():
         Y_GPS = (N_GPS+h_GPS) * math.cos(lat_GPS) * math.sin(lon_GPS)
         Z_GPS = (N_GPS * (1-e_2) + h_GPS) * math.sin(lat_GPS)
 
-        #Calculate elevation
         delta_x = X_GPS-X_0
         delta_y = Y_GPS-Y_0
         delta_z = Z_GPS-Z_0
-        delta_h = h_GPS-h_0
-
-        r = math.sqrt((delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z))
-
-        el_rad = math.asin(delta_h/r)
-        el_deg = math.degrees(el_rad)
 
         # Coordinates (S, E, V)
         # Calculate South, East, Local Vertical
@@ -132,6 +125,14 @@ class Communication():
             final_az = SEV_az_deg
         if delta_lon < 0:
             final_az = 360 + SEV_az_deg
+
+        #Calculate elevation
+        my_rho = math.sqrt((delta_x * delta_x + delta_y * delta_y + delta_z * delta_z))
+        el_rad = math.asin(V/my_rho)
+        el_deg = math.degrees(el_rad)
+
+        r = math.sqrt((delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z))
+
 
         return final_az, el_deg, height
 

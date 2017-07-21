@@ -1,0 +1,40 @@
+component alter_plim "Controls azimuth postion limits based on north offset";
+pin in bit not_calibrating;
+pin in float calibrate_max;
+pin in float calibrate_min;
+pin io float max;
+pin io float min;
+param rw float init_angle;
+param rw float north_angle;
+param rw bit init;
+pin out float scale_offset;
+function _;
+license "GPL"; // indicates GPL v2 or later
+;;
+if (!not_calibrating)
+{
+    max = calibrate_max;
+    min = calibrate_min;
+    north_angle = 0.0;
+}
+else
+{
+    if (!init)
+    {
+        if (init_angle != 0.0)
+            north_angle = init_angle;
+        init = true;
+    }
+
+    if (north_angle != 0.0)
+    {
+        max = calibrate_max - north_angle;
+        min = calibrate_min - north_angle;
+    }
+    else
+    {
+        max = calibrate_max;
+        min = calibrate_min;
+    }
+}
+scale_offset = north_angle;
