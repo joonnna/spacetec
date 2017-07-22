@@ -431,11 +431,20 @@ start
 # Haltalk
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
 loadusr halmeter -s signal rssi-reader-to-sigcheck
-#loadusr halmeter -s pin ppid.0.command
+loadusr halmeter -s pin ppid.1.command
 #loadusr halmeter -s pin ppid.0.feedback
 #loadusr halmeter -s pin muxn.0.sel
-#loadusr halmeter -s pin muxn.0.in1
-#loadusr halmeter -s pin steptrack.0.out
+loadusr halmeter -s pin muxn.1.in1
+loadusr halmeter -s pin steptrack.1.out
+loadusr halmeter -s pin state_and.out
+loadusr halmeter -s pin angle_and.out
+loadusr halmeter -s pin angle_and.in0
+loadusr halmeter -s pin angle_and.in1
+
+loadusr halmeter -s pin scale.2.in
+loadusr halmeter -s pin scale.2.out
+loadusr halmeter -s pin scale.2.offset
+
 #loadusr halmeter -s pin muxn.0.in1
 #loadusr halmeter -s pin vpid.0.feedback
 #loadusr halmeter -s pin set-velocity.max

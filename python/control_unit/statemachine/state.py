@@ -14,6 +14,9 @@ class Statemachine():
     def __init__(self, pos_file, testing=None):
         self.state_lock = threading.Lock()
         self.gps_angle_lock = threading.Lock()
+        self.last_received_lock = threading.Lock()
+
+        self.set_last_received(0.0)
 
         self.az_init_event = threading.Event()
         self.el_init_event = threading.Event()
@@ -48,10 +51,9 @@ class Statemachine():
         #az = 0
         #el = 0
 
+        self.state = Override.calibrating
         self.init_az = az
         self.init_el = el
-
-        self.state = Override.calibrating
 
         self.sd = ServiceDiscovery()
         self.halrcomps = {}
@@ -183,9 +185,13 @@ class Statemachine():
             self.halrcomps[bldc0.name] = bldc0
             self.halrcomps[bldc1.name] = bldc1
 
-    def busy_wait(self, pin):
+    def busy_wait(self, pin, max_wait=None):
+        if max_wait == None:
+            timeout = 5.0
+        else:
+            timeout = max_wait
         start = time.time()
-        timeout = 5.0
+        timeout = 1.0
         while not pin.synced and time.time() - start < timeout:
             time.sleep(0.1)
 
@@ -397,9 +403,12 @@ class Statemachine():
         return pin.get()
 
     def send_gps_pos(self, pos):
-        if self.get_state() == Override.idle:
+        state = self.get_state()
+        if state == Override.idle:
             self.logger.info("Got first UDP packet!")
             self.set_state(Override.stop)
+
+        self.set_last_received(time.time())
 
         az = pos[0]
         el = pos[1]
@@ -415,18 +424,20 @@ class Statemachine():
         mux.getpin("el_gps").set(el)
  #       self.logger.debug("\naz: %f\nel:%f\nheight:%f\n" % (az, el, height))
 
-        if height > self.overide_gps_height:
-            if self.get_state() == Override.gps:
+        if isinstance(state, Manual):
+            pass
+        elif height > self.overide_gps_height:
+            if state == Override.gps_override:
                 self.logger.info("Stopping override gps!")
                 self.set_state(Override.stop)
             else:
                 pass
         else:
-            if self.get_state() == Override.gps:
+            if state == Override.gps_override:
                 pass
             else:
                 self.logger.info("Overriding gps!")
-                self.set_state(Override.gps)
+                self.set_state(Override.gps_override)
 
     def start_pos_thread(self):
         self.pos_thread = new_thread(self.store_old_abspos, self.cleanup_abspos_thread, self.pos_thread_timeout)
@@ -434,6 +445,8 @@ class Statemachine():
 
     def start_comm_thread(self):
         comm = self.comm_constructor()
+        if comm == -1:
+            return
         self.comm_thread = new_thread(comm.run, comm.shutdown, self.comm_thread_timeout, self.send_gps_pos)
         self.comm_thread.start()
 
@@ -482,6 +495,9 @@ class Statemachine():
 
         self.max_el = config["max_el"]
         self.min_el = config["min_el"]
+
+        self.max_time_between_packets = config["gps_max_timeout"]
+
 
     def set_az_pos_limits(self, max, min):
         max_pin = self.halrcomps["pos-comps"].getpin("max_az")
@@ -697,6 +713,10 @@ class Statemachine():
 
 
     def get_tracking_pin_state(self):
+        time_since_last_packet = self.get_last_received()
+        if time_since_last_packet == 0.0:
+            return Override.idle
+
         tracking = self.halrcomps["step"].getpin("track").get()
         if tracking:
             return State.tracking
@@ -716,6 +736,10 @@ class Statemachine():
     def set_state(self, new_state):
         self.state_lock.acquire()
 
+        if self.state == new_state and new_state != Override.calibrating:
+            self.state_lock.release()
+            return
+
         if isinstance(new_state, Manual):
             if new_state == Manual.stop:
                 self.state = self.get_tracking_pin_state()
@@ -724,11 +748,11 @@ class Statemachine():
         elif isinstance(new_state, Override) and not isinstance(self.state, Manual):
             if new_state == Override.stop:
                 self.state = self.get_tracking_pin_state()
-            elif self.state == Override.calibrating and new_state == Override.gps:
+            elif self.state == Override.calibrating and new_state == Override.gps_override:
                 pass
             elif self.state == Override.idle and new_state == Override.calibrating:
                 pass
-            elif self.state == Override.gps:
+            elif self.state == Override.gps_override:
                 pass
             else:
                 self.state = new_state
@@ -745,7 +769,7 @@ class Statemachine():
             vel_mux = 2
             gps_mux = 0
             self.set_tracking_threshold()
-        elif self.state == State.gps or self.state == Override.gps:
+        elif self.state == State.gps or self.state == Override.gps_override:
             vel_mux = 2
             gps_mux = 1
             self.set_gps_threshold()
@@ -760,6 +784,8 @@ class Statemachine():
             self.state_lock.release()
             return
 
+        max_wait = 1.0
+
         p1 = self.halrcomps["velmux"].getpin("az_sel")
         p1.set(vel_mux)
         p2 = self.halrcomps["velmux"].getpin("el_sel")
@@ -770,10 +796,10 @@ class Statemachine():
         p4 = self.halrcomps["gpsmux"].getpin("el_sel")
         p4.set(gps_mux)
 
-        self.busy_wait(p1)
-        self.busy_wait(p2)
-        self.busy_wait(p3)
-        self.busy_wait(p4)
+        self.busy_wait(p1, max_wait)
+        self.busy_wait(p2, max_wait)
+        self.busy_wait(p3, max_wait)
+        self.busy_wait(p4, max_wait)
 
         self.logger.info("Entered %s state" % (self.state.name))
         self.state_lock.release()
@@ -783,6 +809,17 @@ class Statemachine():
         ret = self.state
         self.state_lock.release()
 
+        return ret
+
+    def set_last_received(self, time):
+        self.last_received_lock.acquire()
+        self.last_received = time
+        self.last_received_lock.release()
+
+    def get_last_received(self):
+        self.last_received_lock.acquire()
+        ret = self.last_received
+        self.last_received_lock.release()
         return ret
 
     def _connected(self, connected):
@@ -826,9 +863,28 @@ class Statemachine():
         self.comm_thread_timeout = comm_thread.timeout
         self.comm_thread.start()
 
+        not_receiving = False
         try:
             while True:
                 time.sleep(self.check_threads_timeout)
+
+                state = self.get_state()
+
+                if state == Manual.position or state == Manual.velocity:
+                    pass
+                elif state == Override.idle or state == Override.calibrating:
+                    pass
+                else:
+                    time_since_last_packet =  time.time() - self.get_last_received()
+
+                    if time_since_last_packet > self.max_time_between_packets:
+                        self.logger.info("Not received ptu data for %f seconds, going rssi override" % (time_since_last_packet))
+                        self.set_state(Manual.tracking)
+                        not_receiving = True
+                    elif not_receiving:
+                        self.logger.info("Recieving ptu data as normal again, exiting rssi override")
+                        self.set_state(Manual.stop)
+                        not_receiving = False
 
                 if not self.pos_thread.is_alive():
                     self.logger.info("Pos thread died, restarting")

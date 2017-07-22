@@ -9,7 +9,7 @@ class Override(Enum):
     stop = 0
     calibrating = 1
     idle = 2
-    gps = 3
+    gps_override = 3
 
 class Manual(Enum):
     stop = 0

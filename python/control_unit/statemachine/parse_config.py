@@ -45,4 +45,6 @@ def read_config():
     dict["calibration_diff"] = config.getfloat("NEAR_ENDSTOP_VALUES", "CALIBRATION_DIFF")
     dict["normal_diff"] = config.getfloat("NEAR_ENDSTOP_VALUES", "NORMAL_DIFF")
 
+    dict["gps_max_timeout"] = config.getfloat("GPS_TIMEOUT", "MAX_TIME_BETWEEN_PACKETS")
+
     return dict

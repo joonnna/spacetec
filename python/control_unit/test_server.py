@@ -49,6 +49,12 @@ class CommTest(unittest.TestCase):
         self.assertEqual(69.05233049335735, ret[0])
         self.assertEqual(21.577413283839867, ret[1])
 
+    def test_raises_exception_on_same_positon(self):
+        args = (self.comm.loc_long, self.comm.loc_lat, self.comm.loc_height)
+        print self.comm._calc_pos(args)
+        self.assertRaises(FloatingPointError, self.comm._calc_pos, args)
+
+
 
 def extract_pos(data):
     long_start     = 171
