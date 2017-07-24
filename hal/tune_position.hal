@@ -55,8 +55,8 @@ setp hm2_de0n.0.gpio.044.is_output TRUE
 setp bldc.0.scale 2048
 setp bldc.0.poles 8
 
-setp hm2_de0n.0.encoder.00.scale 11.37
-setp hm2_de0n.0.encoder.01.scale 11.37
+setp hm2_de0n.0.encoder.00.scale -199.111111
+setp hm2_de0n.0.encoder.01.scale -113.777777
 #setp hm2_de0n.0.encoder.01.scale 4096/360*10
 
 # encoder position to scale, treng vell ikke disse tell tuning?
