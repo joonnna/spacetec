@@ -6,8 +6,8 @@ import ConfigParser
 
 class RssiPoller():
     def __init__(self):
-        logging.basicConfig(filename="/var/log/rssipoller.log", level=logging.DEBUG)
-        self.logger = logging.getLogger("rssipoller")
+        #logging.basicConfig(filename="/var/log/rssipoller.log", level=logging.DEBUG)
+        #self.logger = logging.getLogger("rssipoller")
         self.sd = ServiceDiscovery()
 
         self.read_config()
@@ -32,7 +32,8 @@ class RssiPoller():
         self.sd.start()
         rssi_reader.bind_component()
 
-        self.logger.info("Bound rssi-poller")
+        print ("BOUND RSSI-POLLER")
+        #self.logger.info("Bound rssi-poller")
 
     def read_adc(self, prev):
         counter = 0.0
@@ -48,10 +49,10 @@ class RssiPoller():
                 value = value + (float(content[0])/self.relative_value)
                 counter = counter + 1.0
             except IOError, msg:
-                self.logger.error("ADC file problems : %s" % (msg))
+         #       self.logger.error("ADC file problems : %s" % (msg))
                 return 0.0
             except ValueError, msg:
-                self.logger.error("Float errors : %s" % (msg))
+          #      self.logger.error("Float errors : %s" % (msg))
                 return 0.0
 
         #self.logger.debug(counter)
@@ -66,11 +67,12 @@ class RssiPoller():
 
 r = RssiPoller()
 
-r.logger.info("Starting polling")
+#r.logger.info("Starting polling")
 try:
     prev = 0.0
     while True:
-        value = r.read_adc(prev)
-        prev = value
+        pass
+        #value = r.read_adc(prev)
+        #prev = value
 except KeyboardInterrupt:
     r.sd.stop()

@@ -52,6 +52,7 @@ class Statemachine():
         #el = 0
 
         self.state = Override.calibrating
+
         self.init_az = az
         self.init_el = el
 
@@ -60,17 +61,20 @@ class Statemachine():
         self.initrcomps(testing)
         self._search_and_bind()
 
-        p = self.halrcomps["pwm"].getpin("az")
-        p.set(True)
-        self.busy_wait(p)
 
-        p2 = self.halrcomps["pwm"].getpin("el")
-        p2.set(True)
-        self.busy_wait(p2)
+ #       self.set_el_pos_limits(100000000000.0, -1000000000.0)
 
         self.logger.info("Waiting for bldc init")
         self.wait_for_init()
         self.logger.info("Bldc init done!")
+        time.sleep(1)
+        self.reset_el_encoder()
+        time.sleep(20)
+        self.set_el_gains()
+
+ #       while True:
+  #          time.sleep(2)
+
 
         self.calibrate()
         self.start_pos_thread()
@@ -115,8 +119,6 @@ class Statemachine():
         #pos_comps.no_create = True
 
         motor_feedback = halremote.RemoteComponent("motor-feedback", debug=False)
-        zero_az = motor_feedback.newpin("zero_az", halremote.HAL_BIT, halremote.HAL_IN)
-        zero_el = motor_feedback.newpin("zero_el", halremote.HAL_BIT, halremote.HAL_IN)
         motor_feedback.newpin("az_pos", halremote.HAL_FLOAT, halremote.HAL_IN)
         motor_feedback.newpin("el_pos", halremote.HAL_FLOAT, halremote.HAL_IN)
         motor_feedback.newpin("reset_az", halremote.HAL_BIT, halremote.HAL_OUT)
@@ -127,8 +129,6 @@ class Statemachine():
         el_init = motor_feedback.newpin("el_init_done", halremote.HAL_BIT, halremote.HAL_IN)
         az_init.on_value_changed.append(self.az_init_done)
         el_init.on_value_changed.append(self.el_init_done)
-        zero_az.on_value_changed.append(self.zero_az_callback)
-        zero_el.on_value_changed.append(self.zero_el_callback)
         #motor_feedback.no_create = True
 
         gps_angle_check = halremote.RemoteComponent("set-angle", debug=False)
@@ -136,13 +136,22 @@ class Statemachine():
         gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
         #gps_angle_check.no_create = True
 
-        pwm = halremote.RemoteComponent("pwm", debug=False)
-        pwm_az = pwm.newpin("az", halremote.HAL_BIT, halremote.HAL_OUT)
-        pwm.newpin("el", halremote.HAL_BIT, halremote.HAL_OUT)
-        #pwm_az.on_synced_changed.append(self.test_sync)
-        #pwm.no_create = True
+        el_gain = halremote.RemoteComponent("el-gain", debug=False)
+        el_gain.newpin("Pgain", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("Igain", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("max-err", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("max-errI", halremote.HAL_FLOAT, halremote.HAL_OUT)
 
-        self.halrcomps[pwm.name] = pwm
+        el_gain.newpin("vel-Pgain", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("vel-Igain", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("vel-max-err", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        el_gain.newpin("vel-max-errI", halremote.HAL_FLOAT, halremote.HAL_OUT)
+
+        poller = halremote.RemoteComponent("rssi-reader", debug=False)
+        poller.newpin("value", halremote.HAL_FLOAT, halremote.HAL_OUT)
+
+        self.halrcomps[el_gain.name] = el_gain
+        self.halrcomps[poller.name] = poller
         self.halrcomps[gps_angle_check.name] = gps_angle_check
         self.halrcomps[motor_feedback.name] = motor_feedback
         self.halrcomps[pos_comps.name] = pos_comps
@@ -192,8 +201,40 @@ class Statemachine():
             timeout = max_wait
         start = time.time()
         timeout = 1.0
-        while not pin.synced and time.time() - start < timeout:
+        while not pin.synced:
+            if time.time() - start > timeout:
+                return
             time.sleep(0.1)
+
+    def set_el_gains(self):
+        el_gain = self.halrcomps["el-gain"]
+        p0 = el_gain.getpin("Pgain")
+        p0.set(5.0)
+        #p1 = el_gain.getpin("Igain")
+        #p1.set(3.0)
+        p2 = el_gain.getpin("max-err")
+        p2.set(50.0)
+        #p3 = el_gain.getpin("max-errI")
+        #p3.set(10.0)
+
+        p4 = el_gain.getpin("vel-Pgain")
+        p4.set(0.02)
+        #p5 = el_gain.getpin("vel-Igain")
+#        p5.set(0.001)
+        p6 = el_gain.getpin("vel-max-err")
+        p6.set(50.0)
+        #p7 = el_gain.getpin("vel-max-errI")
+        #p7.set(200.0)
+
+        self.busy_wait(p0)
+   #     self.busy_wait(p1)
+        self.busy_wait(p2)
+    #    self.busy_wait(p3)
+        self.busy_wait(p4)
+ #       self.busy_wait(p5)
+        self.busy_wait(p6)
+  #      self.busy_wait(p7)
+
 
     def test_sync(self, val):
         self.logger.debug("JADA!!!!! %s" % (val))
@@ -263,38 +304,46 @@ class Statemachine():
             self.moving_el_event.set()
 
     def wait_for_init(self):
-     #   pin = self.halrcomps["motor-feedback"].getpin("az_init_start")
-    #    pin.set(True)
-   #     self.busy_wait(pin)
-  #      self.logger.info("Waiting for physical bldc init to be start")
- #       self.az_init_event.wait()
-
+        """
+        pin = self.halrcomps["motor-feedback"].getpin("az_init_start")
+        pin.set(True)
+        self.busy_wait(pin)
+        self.logger.info("Waiting for physical bldc init to be start")
+        self.az_init_event.wait()
+        #time.sleep(5)
+        """
         pin2 = self.halrcomps["motor-feedback"].getpin("el_init_start")
         pin2.set(True)
         self.busy_wait(pin2)
         self.logger.info("Waiting for physical bldc init to be start")
         self.el_init_event.wait()
-
+        self.reset_el_encoder()
 
     def wait_for_zero_az(self):
         self.logger.info("Waiting for zero az velocity")
+        period = 2.0
 
-        self.zero_az_event.wait()
-        self.zero_az_event.clear()
-
-        self.logger.info("Got zero az velocity!")
-
-        return self.halrcomps["motor-feedback"].getpin("az_pos").get()
+        pin = self.halrcomps["motor-feedback"].getpin("az_pos")
+        while True:
+            val = pin.get()
+            time.sleep(period)
+            val2 = pin.get()
+            if abs(val2 - val) < 5.0:
+                self.logger.info("Got zero az velocity!")
+                return val2
 
     def wait_for_zero_el(self):
         self.logger.info("Waiting for zero el velocity")
+        period = 2.0
 
-        self.zero_el_event.wait()
-        self.zero_el_event.clear()
-
-        self.logger.info("Waiting for zero el velocity")
-
-        return self.halrcomps["motor-feedback"].getpin("el_pos").get()
+        pin = self.halrcomps["motor-feedback"].getpin("el_pos")
+        while True:
+            val = pin.get()
+            time.sleep(period)
+            val2 = pin.get()
+            if abs(val2 - val) < 5.0:
+                self.logger.info("Got zero el velocity!")
+                return val2
 
     def manual_state_callback(self, val):
         if val == 0:
@@ -418,6 +467,7 @@ class Statemachine():
 
         if az_command > 180.0:
             az_command = az_command - 360.0
+        az_command = 0.0
 
         mux = self.halrcomps["gpsmux"]
         mux.getpin("az_gps").set(az_command)
@@ -444,9 +494,11 @@ class Statemachine():
         self.pos_thread.start()
 
     def start_comm_thread(self):
-        comm = self.comm_constructor()
-        if comm == -1:
+        try:
+            comm = self.comm_constructor()
+        except TypeError:
             return
+
         self.comm_thread = new_thread(comm.run, comm.shutdown, self.comm_thread_timeout, self.send_gps_pos)
         self.comm_thread.start()
 
@@ -562,7 +614,9 @@ class Statemachine():
 
     def calibrate_az(self):
         self.logger.info("Started calibrating azimuth")
-        self.set_az_calibration_diff()
+
+        self.set_az_normal_diff()
+        #self.set_az_calibration_diff()
         self.set_az_pos_limits(self.az_range, -self.az_range)
 
         if self.init_az > 0:
@@ -577,58 +631,47 @@ class Statemachine():
 
         self.send_az_calibrate_pos(target_pos)
 
-        self.moving_az_event.wait()
-
         #Stop 1
         az_pos = self.wait_for_zero_az()
         self.logger.info("Found first endpoint: %f" % (az_pos))
-        self.disable_az_pwm()
-        self.logger.info("Disabled pwm")
 
-        self.set_az_normal_diff()
-        self.reset_az_encoder()
         self.logger.info("Reset encoder")
+        self.reset_az_encoder()
+        #self.set_az_normal_diff()
 
         opposite_side = -direction * self.az_range
         self.logger.info("opposite side : %f" % (opposite_side))
         self.send_az_calibrate_pos(opposite_side)
-
-        self.enable_az_pwm()
-        self.logger.info("Enabled pwm")
-
-        time.sleep(3)
-
-        self.moving_az_event.wait()
 
         #Stop 2
         range = self.wait_for_zero_az()
         total_az_range = abs(range)
         self.logger.info("Found second endpoint total range: %f" % (total_az_range))
 
+        if range > 0:
+            mid = total_az_range/2.0
+        else:
+            mid = -total_az_range/2.0
         #Move to middle and reset
-        mid = range/2.0
-        self.send_az_calibrate_pos(-direction*mid)
+        self.send_az_calibrate_pos(mid)
 
-        self.moving_az_event.wait()
-
+        self.logger.info("Going to mid %f" % (mid))
         #Stop 3
         temp2 = self.wait_for_zero_az()
         self.logger.info("Found mid point: %f" % (temp2))
-        self.disable_az_pwm()
-
-        self.set_state(Override.idle)
 
         self.reset_az_encoder()
-        max = abs(mid)
-        min = -abs(mid)
+        self.send_az_calibrate_pos(0.0)
+        max = abs(mid) - 1.0
+        min = -abs(mid) + 1.0
+        self.logger.info("max: %f min: %f" % (max, min))
         self.set_az_pos_limits(max, min)
-
-        self.enable_az_pwm()
-
 
     def calibrate_el(self):
         self.logger.info("Started calibrating elevation")
-        self.set_el_calibration_diff()
+
+        self.set_el_normal_diff()
+
         self.set_el_pos_limits(self.el_range, -self.el_range)
 
         direction = 1.0
@@ -638,28 +681,15 @@ class Statemachine():
 
         self.send_el_calibrate_pos(target_pos)
 
-        self.moving_el_event.wait()
-
         #Stop 1
         el_pos = self.wait_for_zero_el()
         self.logger.info("Found first endpoint: %f" % (el_pos))
-        self.disable_el_pwm()
-        self.logger.info("Disabled pwm")
 
-        self.set_el_normal_diff()
-        self.reset_el_encoder()
         self.logger.info("Reset encoder")
-
+        self.reset_el_encoder()
         opposite_side = -direction * self.el_range
         self.logger.info("opposite side : %f" % (opposite_side))
         self.send_el_calibrate_pos(opposite_side)
-
-        self.enable_el_pwm()
-        self.logger.info("Enabled pwm")
-
-        time.sleep(3)
-
-        self.moving_el_event.wait()
 
         #Stop 2
         range = self.wait_for_zero_el()
@@ -669,34 +699,19 @@ class Statemachine():
         #Move to middle and reset
         mid = range/2.0
 
-        self.moving_el_event.wait()
-
         #Stop 3
         temp2 = self.wait_for_zero_el()
         self.logger.info("Found mid point: %f" % (temp2))
-
-        self.disable_el_pwm()
-
         self.reset_el_encoder()
         self.send_el_calibrate_pos(-direction*mid)
-
-        self.enable_el_pwm()
-
-        time.sleep(5)
 
         final_angle = 90.0
         temp3 = self.wait_for_zero_el()
         self.logger.info("Found final angle 90 deg: %f" % (temp3))
 
-        self.disable_el_pwm()
-
-        self.set_state(Override.idle)
-
         self.reset_el_encoder()
-
+        self.send_el_calibrate_pos(0.0)
         self.set_el_pos_limits(self.max_el, self.min_el)
-
-        self.enable_el_pwm()
 
     def calibrate(self):
         self.set_state(Override.calibrating)
@@ -709,6 +724,8 @@ class Statemachine():
 
         self.calibrate_el()
 
+
+        self.set_state(Override.idle)
         self.logger.info("Finished calibrating")
 
 

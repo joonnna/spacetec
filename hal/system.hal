@@ -24,8 +24,8 @@ loadusr haltalk
 waitexists step
 waitbound step
 
-waitexists pwm
-waitbound pwm
+waitexists el-gain
+waitbound el-gain
 
 waitexists gpsmux
 waitbound gpsmux
@@ -69,49 +69,32 @@ net scale_3-to-pwmgen_04 scale.7.out => hm2_de0n.0.pwmgen.03.value
 net scale_4-to-pwmgen_05 scale.8.out => hm2_de0n.0.pwmgen.04.value
 net scale_5-to-pwmgen_06 scale.9.out => hm2_de0n.0.pwmgen.05.value
 
-net encoder.0.pos-to-scale-to-abs hm2_de0n.0.encoder.00.position scale.0.in
-net encoder.1.pos-to-scale-to-abs hm2_de0n.0.encoder.01.position scale.2.in
+net encoder.0.pos-to-scale-to-abs hm2_de0n.0.encoder.00.position ppid.0.feedback scale.12.in
+net encoder.1.pos-to-scale-to-abs hm2_de0n.0.encoder.01.position ppid.1.feedback scale.13.in
 
 net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcounts
 net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
-net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity scale.10.in near.0.in1
-net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity scale.11.in near.1.in1
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity vpid.0.feedback
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity vpid.1.feedback
 
-net scale-to-vpid.0 scale.10.out vpid.0.feedback
-net scale-to-vpid.1 scale.11.out vpid.1.feedback
-
-setp scale.10.gain [GEAR_SCALES]AZ
-setp scale.11.gain [GEAR_SCALES]EL
-
-setp scale.12.gain [GEAR_SCALES]AZ
-setp scale.13.gain [GEAR_SCALES]EL
-
-setp scale.14.gain [GEAR_SCALES]AZ
-setp scale.15.gain [GEAR_SCALES]EL
-
-net az-pwm-enable pwm.az hm2_de0n.0.pwmgen.00.enable hm2_de0n.0.pwmgen.01.enable hm2_de0n.0.pwmgen.02.enable
-
-net el-pwm-enable pwm.el hm2_de0n.0.pwmgen.03.enable hm2_de0n.0.pwmgen.04.enable hm2_de0n.0.pwmgen.05.enable
-
-
-#setp hm2_de0n.0.pwmgen.00.enable TRUE
-#setp hm2_de0n.0.pwmgen.01.enable TRUE
-#setp hm2_de0n.0.pwmgen.02.enable TRUE
-#setp hm2_de0n.0.pwmgen.03.enable TRUE
-#setp hm2_de0n.0.pwmgen.04.enable TRUE
-#setp hm2_de0n.0.pwmgen.05.enable TRUE
+setp hm2_de0n.0.pwmgen.00.enable TRUE
+setp hm2_de0n.0.pwmgen.01.enable TRUE
+setp hm2_de0n.0.pwmgen.02.enable TRUE
+setp hm2_de0n.0.pwmgen.03.enable TRUE
+setp hm2_de0n.0.pwmgen.04.enable TRUE
+setp hm2_de0n.0.pwmgen.05.enable TRUE
 
 setp hm2_de0n.0.pwmgen.pwm_frequency 40000
 
 # ONLY FOR TESTBED
 # set motor driver enable high
-setp hm2_de0n.0.gpio.042.out TRUE
-setp hm2_de0n.0.gpio.043.out TRUE
-setp hm2_de0n.0.gpio.044.out TRUE
-setp hm2_de0n.0.gpio.042.is_output TRUE
-setp hm2_de0n.0.gpio.043.is_output TRUE
-setp hm2_de0n.0.gpio.044.is_output TRUE
+#setp hm2_de0n.0.gpio.042.out TRUE
+#setp hm2_de0n.0.gpio.043.out TRUE
+#setp hm2_de0n.0.gpio.044.out TRUE
+#setp hm2_de0n.0.gpio.042.is_output TRUE
+#setp hm2_de0n.0.gpio.043.is_output TRUE
+#setp hm2_de0n.0.gpio.044.is_output TRUE
 
 # set bldc scale and poles
 setp bldc.0.scale 2048
@@ -120,9 +103,8 @@ setp bldc.0.poles 8
 setp bldc.1.scale 2048
 setp bldc.1.poles 8
 
-setp hm2_de0n.0.encoder.00.scale [ENCODER_SCALES]AZ_SCALE
-setp hm2_de0n.0.encoder.01.scale [ENCODER_SCALES]EL_SCALE
-#setp hm2_de0n.0.encoder.01.scale 4096/360*10
+setp hm2_de0n.0.encoder.00.scale [ENCODER_SCALES]SCALE
+setp hm2_de0n.0.encoder.01.scale [ENCODER_SCALES]SCALE
 
 # set bldc to pwmgen scale gain
 setp scale.4.gain 0.5
@@ -171,8 +153,8 @@ setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
-setp near.0.difference [NEAR_ZERO]DIFF
-setp near.1.difference [NEAR_ZERO]DIFF
+#setp near.0.difference [NEAR_ZERO]DIFF
+#setp near.1.difference [NEAR_ZERO]DIFF
 
 setp set-velocity.0.calibration [AZ_CALIBRATE_VEL_LIMITS]MAX
 setp set-velocity.1.calibration [EL_CALIBRATE_VEL_LIMITS]MAX
@@ -235,24 +217,44 @@ setp vpid.0.maxerror [AZ_VEL_PID]MAX_ERROR
 setp vpid.0.maxerrorI [AZ_VEL_PID]MAX_ERROR_I
 setp vpid.0.maxoutput [AZ_VEL_PID]MAX_OUTPUT
 
-setp vpid.1.Pgain [EL_VEL_PID]PGAIN
-setp vpid.1.Igain [EL_VEL_PID]IGAIN
-setp vpid.1.maxerror [EL_VEL_PID]MAX_ERROR
-setp vpid.1.maxerrorI [EL_VEL_PID]MAX_ERROR_I
-setp vpid.1.maxoutput [EL_VEL_PID]MAX_OUTPUT
+setp vpid.1.Pgain 0.0
+setp vpid.1.Igain 0.0
+setp vpid.1.maxerror 0.0
+setp vpid.1.maxerrorI 0.0
+setp vpid.1.maxoutput 0.0
 
 setp ppid.0.Pgain [AZ_POS_PID]PGAIN
-setp ppid.0.Dgain [AZ_POS_PID]DGAIN
 setp ppid.0.Igain [AZ_POS_PID]IGAIN
 setp ppid.0.maxerror [AZ_POS_PID]MAX_ERROR
 setp ppid.0.maxerrorI [AZ_POS_PID]MAX_ERROR_I
 
-setp ppid.1.Pgain [EL_POS_PID]PGAIN
-setp ppid.1.Dgain [EL_POS_PID]DGAIN
-setp ppid.1.Igain [EL_POS_PID]IGAIN
-setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
-setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
+setp ppid.1.Pgain 0.0
+setp ppid.1.Dgain 0.0
+setp ppid.1.Igain 0.0
+setp ppid.1.maxerror 0.0
+setp ppid.1.maxerrorI 0.0
 
+#setp ppid.1.Pgain [EL_POS_PID]PGAIN
+#setp ppid.1.Dgain [EL_POS_PID]DGAIN
+#setp ppid.1.Igain [EL_POS_PID]IGAIN
+#setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
+#setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
+
+#setp vpid.1.Pgain [EL_VEL_PID]PGAIN
+#setp vpid.1.Igain [EL_VEL_PID]IGAIN
+#setp vpid.1.maxerror [EL_VEL_PID]MAX_ERROR
+#setp vpid.1.maxerrorI [EL_VEL_PID]MAX_ERROR_I
+#setp vpid.1.maxoutput [EL_VEL_PID]MAX_OUTPUT
+
+net el-pgain el-gain.Pgain ppid.1.Pgain
+net el-igain el-gain.Igain ppid.1.Igain
+net el-max-err el-gain.max-err ppid.1.maxerror
+net el-max-errI el-gain.max-errI ppid.1.maxerrorI
+
+net el-vel-pgain el-gain.vel-Pgain vpid.1.Pgain
+net el-vel-igain el-gain.vel-Igain vpid.1.Igain
+net el-vel-max-err el-gain.vel-max-err vpid.1.maxerror
+net el-vel-max-errI el-gain.vel-max-errI vpid.1.maxerrorI
 
 ####################
 #LIM/PID VALUES END#
@@ -266,14 +268,11 @@ setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
 net mux-tp-plim.0 muxn.0.out plim.0.in
 net mux-tp-plim.1 muxn.1.out plim.1.in
 
-net plim-to-scale.0 plim.0.out scale.12.in
-net plim-to-scale.1 plim.1.out scale.13.in
+net plim-to-scale.0 plim.0.out scale.10.in
+net plim-to-scale.1 plim.1.out scale.11.in
 
-net scale-to-ppid.0 scale.12.out ppid.0.command
-net scale-to-ppid.1 scale.13.out ppid.1.command
-
-net scale-to-feedback-ppid.0 scale.14.out ppid.0.feedback
-net scale-to-feedback-ppid.1 scale.15.out ppid.1.feedback
+net scale-to-ppid.0 scale.10.out ppid.0.command
+net scale-to-ppid.1 scale.11.out ppid.1.command
 
 net ppid-to-vmux.0 ppid.0.output vmuxn.0.in2
 net ppid-to-vmux.1 ppid.1.output vmuxn.1.in2
@@ -301,9 +300,6 @@ net step-to-mux-near.1 steptrack.1.out muxn.1.in0 near.3.in1
 net near-to-and.0 near.2.out angle_and.in0
 net near-to-and.1 near.3.out angle_and.in1
 
-net near-to-python.0 near.0.out motor-feedback.zero_az
-net near-to-python.1 near.1.out motor-feedback.zero_el
-
 net init-to-bldc.0 motor-feedback.az_init_start bldc.0.init
 net init-to-bldc.1 motor-feedback.el_init_start bldc.1.init
 
@@ -322,8 +318,11 @@ net calibrate_el gpsmux.el_calibration muxn.1.in2
 net vsel.0 velmux.az_sel vmuxn.0.sel
 net vsel.1 velmux.el_sel vmuxn.1.sel
 
-net abspos.0 scale.0.out abspos.az_in abs.0.in steptrack.0.in1 scale.14.in motor-feedback.az_pos
-net abspos.1 scale.2.out abspos.el_in abs.1.in steptrack.1.in1 scale.15.in motor-feedback.el_pos
+net convert-antenna-angle.0 scale.12.out scale.0.in
+net convert-antenna-angle.1 scale.13.out scale.2.in
+
+net abspos.0 scale.0.out abspos.az_in abs.0.in steptrack.0.in1 motor-feedback.az_pos
+net abspos.1 scale.2.out abspos.el_in abs.1.in steptrack.1.in1 motor-feedback.el_pos
 
 net reset.0 abspos.az_reset scale.0.offset
 net reset.1 abspos.el_reset scale.2.offset
@@ -337,21 +336,27 @@ setp scale.1.gain 1
 setp scale.2.gain 1
 setp scale.3.gain 1
 
+setp scale.10.gain [MOTOR_SCALES_REV]AZ
+setp scale.11.gain [MOTOR_SCALES_REV]EL
+
+setp scale.12.gain [MOTOR_SCALES]AZ
+setp scale.13.gain [MOTOR_SCALES]EL
 
 #################
 #FUNCTIONS START#
 #################
 
-addf sigcheck.0 slow_thread
+addf sigcheck.0 fast_thread
 
-addf steptrack.0 slow_thread
-addf steptrack.1 slow_thread
+#addf steptrack.0 fast_thread
+addf steptrack.1 fast_thread
 
-addf near.2 slow_thread
+addf near.2 fast_thread
 addf near.3 slow_thread
 
-addf angle_and slow_thread
-addf state_and slow_thread
+
+addf state_and fast_thread
+addf angle_and fast_thread
 
 
 # fast threads
@@ -364,9 +369,6 @@ addf abs.1 fast_thread
 addf near.4 fast_thread
 addf near.5 fast_thread
 
-addf near.0 slow_thread
-addf near.1 slow_thread
-
 addf set-velocity.0 fast_thread
 addf set-velocity.1 fast_thread
 
@@ -374,23 +376,19 @@ addf set-velocity.1 fast_thread
 addf scale.0 fast_thread
 addf scale.2 fast_thread
 
-#vpid scales
+#PRE-PID NEW
 addf scale.10 fast_thread
 addf scale.11 fast_thread
 
-#ppid scales
-addf scale.14 fast_thread
-addf scale.15 fast_thread
+#AFTER_ABSPOS_SCALE
+addf scale.12 fast_thread
+addf scale.13 fast_thread
 
 addf muxn.0 fast_thread
 addf muxn.1 fast_thread
 
 addf plim.0 fast_thread
 addf plim.1 fast_thread
-
-#pre-ppid scales
-addf scale.12 fast_thread
-addf scale.13 fast_thread
 
 addf ppid.0.do-pid-calcs fast_thread
 addf ppid.1.do-pid-calcs fast_thread
@@ -430,20 +428,31 @@ start
 
 # Haltalk
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
-loadusr halmeter -s signal rssi-reader-to-sigcheck
-loadusr halmeter -s pin ppid.1.command
+#loadusr halmeter -s signal rssi-reader-to-sigcheck
+loadusr halmeter -s pin plim.1.in
+loadusr halmeter -s pin plim.1.out
+loadusr halmeter -s pin plim.1.max
+loadusr halmeter -s pin plim.1.min
+#loadusr halmeter -s pin scale.13.gain
+#loadusr halmeter -s pin scale.13.out
+#loadusr halmeter -s pin ppid.1.error
+#loadusr halmeter -s pin ppid.1.errorI
+#loadusr halmeter -s pin vpid.1.error
+#loadusr halmeter -s pin vpid.1.errorI
+
+#loadusr halmeter -s pin hm2_de0n.0.encoder.00.velocity
+#loadusr halmeter -s pin ppid.1.command
 #loadusr halmeter -s pin ppid.0.feedback
 #loadusr halmeter -s pin muxn.0.sel
-loadusr halmeter -s pin muxn.1.in1
-loadusr halmeter -s pin steptrack.1.out
-loadusr halmeter -s pin state_and.out
-loadusr halmeter -s pin angle_and.out
-loadusr halmeter -s pin angle_and.in0
-loadusr halmeter -s pin angle_and.in1
+#loadusr halmeter -s pin muxn.0.in1
+#loadusr halmeter -s pin steptrack.1.out
+#loadusr halmeter -s pin angle_and.out
+#loadusr halmeter -s pin angle_and.in0
+#loadusr halmeter -s pin angle_and.in1
 
-loadusr halmeter -s pin scale.2.in
-loadusr halmeter -s pin scale.2.out
-loadusr halmeter -s pin scale.2.offset
+#loadusr halmeter -s pin scale.2.in
+#loadusr halmeter -s pin scale.2.out
+#loadusr halmeter -s pin scale.2.offset
 
 #loadusr halmeter -s pin muxn.0.in1
 #loadusr halmeter -s pin vpid.0.feedback
@@ -451,11 +460,11 @@ loadusr halmeter -s pin scale.2.offset
 #loadusr halmeter -s pin near.4.out
 #loadusr halmeter -s pin near.4.in1
 #loadusr halmeter -s pin near.4.in2
-loadusr halmeter -s pin plim.1.out
-loadusr halmeter -s pin plim.1.max
-loadusr halmeter -s pin plim.1.min
+#loadusr halmeter -s pin plim.1.out
+#loadusr halmeter -s pin plim.1.max
+#loadusr halmeter -s pin plim.1.min
 
-#loadusr halmeter -s pin motor-feedback.el_init_start
-#loadusr halmeter -s pin motor-feedback.el_init_done
-#loadusr halmeter -s pin bldc.1.init
-#loadusr halmeter -s pin bldc.1.init-done
+#loadusr halmeter -s pin motor-feedback.az_init_start
+#loadusr halmeter -s pin motor-feedback.az_init_done
+#loadusr halmeter -s pin bldc.0.init
+#loadusr halmeter -s pin bldc.0.init-done

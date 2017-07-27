@@ -9,7 +9,11 @@ project_folder = "/home/machinekit/machinekit/spacetec/"
 
 def start(path):
     sm = Statemachine(path)
-    comm = Communication()
+    try:
+        comm = Communication()
+    except TypeError:
+        print "Can't start comm, exiting..."
+        return
     comm_thread = new_thread(comm.run, comm.shutdown, 0.0, sm.send_gps_pos)
 
     sm.run(new_comm, comm_thread)
