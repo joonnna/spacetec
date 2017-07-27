@@ -161,15 +161,15 @@ setp limit1.3.min -1.0
 ################
 #LIM VALUES START
 ################
-setp vpid.0.enable true
+setp vpid.0.enable false
 setp vpid.1.enable false
-setp ppid.0.enable true
+setp ppid.0.enable false
 setp ppid.1.enable false
 
-setp ppid.0.maxerror 10
-setp ppid.0.maxerrorI 5
-setp ppid.0.Pgain 0
-setp ppid.0.Igain 0
+setp ppid.0.maxerror 50
+setp ppid.0.maxerrorI 10
+setp ppid.0.Pgain 5.0
+setp ppid.0.Igain 3.0
 
 setp vpid.0.maxerror 200
 setp vpid.0.maxerrorI 50
@@ -179,8 +179,6 @@ setp vpid.0.Igain 0.02
 
 setp ppid.1.maxerror 50
 setp ppid.1.maxerrorI 10
-#setp ppid.1.Pgain 0.0
-#setp ppid.1.Igain 0.0
 setp ppid.1.Pgain 7
 setp ppid.1.Igain 0.1
 setp ppid.1.Dgain 20
@@ -190,9 +188,6 @@ setp vpid.1.maxerrorI 50
 setp vpid.1.maxoutput 1
 setp vpid.1.Pgain 0.001
 setp vpid.1.Igain 0.02
-
-#setp vpid.1.Pgain 0.0
-#setp vpid.1.Igain 0.0
 
 
 ##############

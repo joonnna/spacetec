@@ -413,6 +413,7 @@ start
 #loadusr halscope
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
 loadusr halmeter -s pin muxn.1.out
+loadusr halmeter -s pin muxn.1.in1
 loadusr halmeter -s pin steptrack.1.out
 #loadusr halmeter -s pin vpid.1.output
 #loadusr halmeter -s pin bldc.1.value
@@ -436,6 +437,7 @@ loadusr halmeter -s pin vpid.1.errorI
 #loadusr halmeter -s pin ppid.0.feedback
 #loadusr halmeter -s pin muxn.0.sel
 #loadusr halmeter -s pin muxn.0.in1
+#loadusr halmeter -s pin steptrack.1.out
 #loadusr halmeter -s pin angle_and.out
 #loadusr halmeter -s pin angle_and.in0
 #loadusr halmeter -s pin angle_and.in1

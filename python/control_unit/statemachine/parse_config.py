@@ -47,4 +47,9 @@ def read_config():
 
     dict["gps_max_timeout"] = config.getfloat("GPS_TIMEOUT", "MAX_TIME_BETWEEN_PACKETS")
 
+
+    dict["wait_period"] = config.getfloat("NEAR_ENDSTOP_VALUES", "WAIT_PERIOD")
+    dict["change_threshold"] = config.getfloat("NEAR_ENDSTOP_VALUES", "CHANGE_THRESHOLD")
+
+
     return dict
