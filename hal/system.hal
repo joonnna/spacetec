@@ -1,10 +1,11 @@
 newthread fast_thread fp [HAL_THREAD_PERIODS]FAST_THREAD
-newthread slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
+#newthread slow_thread fp [HAL_THREAD_PERIODS]SLOW_THREAD
 
 newinst muxn muxn.0 pincount=5
 newinst muxn muxn.1 pincount=5
 newinst muxn vmuxn.0 pincount=3
 newinst muxn vmuxn.1 pincount=3
+newinst muxn el-pid-mux
 loadrt limit1 names=plim.0,plim.1,bldc-lim.0,bldc-lim.1
 loadrt limit2 names=vlim.0,vlim.1
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
@@ -24,8 +25,8 @@ loadusr haltalk
 waitexists step
 waitbound step
 
-waitexists el-gain
-waitbound el-gain
+waitexists pid-control
+waitbound pid-control
 
 waitexists gpsmux
 waitbound gpsmux
@@ -89,12 +90,12 @@ setp hm2_de0n.0.pwmgen.pwm_frequency 40000
 
 # ONLY FOR TESTBED
 # set motor driver enable high
-#setp hm2_de0n.0.gpio.042.out TRUE
-#setp hm2_de0n.0.gpio.043.out TRUE
-#setp hm2_de0n.0.gpio.044.out TRUE
-#setp hm2_de0n.0.gpio.042.is_output TRUE
-#setp hm2_de0n.0.gpio.043.is_output TRUE
-#setp hm2_de0n.0.gpio.044.is_output TRUE
+setp hm2_de0n.0.gpio.042.out TRUE
+setp hm2_de0n.0.gpio.043.out TRUE
+setp hm2_de0n.0.gpio.044.out TRUE
+setp hm2_de0n.0.gpio.042.is_output TRUE
+setp hm2_de0n.0.gpio.043.is_output TRUE
+setp hm2_de0n.0.gpio.044.is_output TRUE
 
 # set bldc scale and poles
 setp bldc.0.scale 2048
@@ -196,11 +197,15 @@ net const-to-python constant.0.out pos-comps.north_angle
 #LIM/PID VALUES START#
 ######################
 
-setp ppid.0.enable true
-setp ppid.1.enable true
+setp ppid.0.enable false
+setp ppid.1.enable false
 
-setp vpid.0.enable true
-setp vpid.1.enable true
+setp vpid.0.enable false
+setp vpid.1.enable false
+
+net enable-az-pids pid-control.az_enable ppid.0.enable vpid.0.enable
+net enable-el-pids pid-control.el_enable ppid.1.enable vpid.1.enable
+
 
 setp bldc-lim.0.max 1.0
 setp bldc-lim.0.min -1.0
@@ -217,44 +222,22 @@ setp vpid.0.maxerror [AZ_VEL_PID]MAX_ERROR
 setp vpid.0.maxerrorI [AZ_VEL_PID]MAX_ERROR_I
 setp vpid.0.maxoutput [AZ_VEL_PID]MAX_OUTPUT
 
-setp vpid.1.Pgain 0.0
-setp vpid.1.Igain 0.0
-setp vpid.1.maxerror 0.0
-setp vpid.1.maxerrorI 0.0
-setp vpid.1.maxoutput 0.0
-
 setp ppid.0.Pgain [AZ_POS_PID]PGAIN
 setp ppid.0.Igain [AZ_POS_PID]IGAIN
 setp ppid.0.maxerror [AZ_POS_PID]MAX_ERROR
 setp ppid.0.maxerrorI [AZ_POS_PID]MAX_ERROR_I
 
-setp ppid.1.Pgain 0.0
-setp ppid.1.Dgain 0.0
-setp ppid.1.Igain 0.0
-setp ppid.1.maxerror 0.0
-setp ppid.1.maxerrorI 0.0
+setp ppid.1.Pgain [EL_POS_PID]PGAIN
+setp ppid.1.Dgain [EL_POS_PID]DGAIN
+setp ppid.1.Igain [EL_POS_PID]IGAIN
+setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
+setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
 
-#setp ppid.1.Pgain [EL_POS_PID]PGAIN
-#setp ppid.1.Dgain [EL_POS_PID]DGAIN
-#setp ppid.1.Igain [EL_POS_PID]IGAIN
-#setp ppid.1.maxerror [EL_POS_PID]MAX_ERROR
-#setp ppid.1.maxerrorI [EL_POS_PID]MAX_ERROR_I
-
-#setp vpid.1.Pgain [EL_VEL_PID]PGAIN
-#setp vpid.1.Igain [EL_VEL_PID]IGAIN
-#setp vpid.1.maxerror [EL_VEL_PID]MAX_ERROR
-#setp vpid.1.maxerrorI [EL_VEL_PID]MAX_ERROR_I
-#setp vpid.1.maxoutput [EL_VEL_PID]MAX_OUTPUT
-
-net el-pgain el-gain.Pgain ppid.1.Pgain
-net el-igain el-gain.Igain ppid.1.Igain
-net el-max-err el-gain.max-err ppid.1.maxerror
-net el-max-errI el-gain.max-errI ppid.1.maxerrorI
-
-net el-vel-pgain el-gain.vel-Pgain vpid.1.Pgain
-net el-vel-igain el-gain.vel-Igain vpid.1.Igain
-net el-vel-max-err el-gain.vel-max-err vpid.1.maxerror
-net el-vel-max-errI el-gain.vel-max-errI vpid.1.maxerrorI
+setp vpid.1.Pgain [EL_VEL_PID]PGAIN
+setp vpid.1.Igain [EL_VEL_PID]IGAIN
+setp vpid.1.maxerror [EL_VEL_PID]MAX_ERROR
+setp vpid.1.maxerrorI [EL_VEL_PID]MAX_ERROR_I
+setp vpid.1.maxoutput [EL_VEL_PID]MAX_OUTPUT
 
 ####################
 #LIM/PID VALUES END#
@@ -348,11 +331,11 @@ setp scale.13.gain [MOTOR_SCALES]EL
 
 addf sigcheck.0 fast_thread
 
-#addf steptrack.0 fast_thread
+addf steptrack.0 fast_thread
 addf steptrack.1 fast_thread
 
 addf near.2 fast_thread
-addf near.3 slow_thread
+addf near.3 fast_thread
 
 
 addf state_and fast_thread
@@ -427,25 +410,32 @@ addf hm2_de0n.0.write fast_thread
 start
 
 # Haltalk
+#loadusr halscope
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
-#loadusr halmeter -s signal rssi-reader-to-sigcheck
-loadusr halmeter -s pin plim.1.in
-loadusr halmeter -s pin plim.1.out
-loadusr halmeter -s pin plim.1.max
-loadusr halmeter -s pin plim.1.min
+loadusr halmeter -s pin muxn.1.out
+loadusr halmeter -s pin steptrack.1.out
+#loadusr halmeter -s pin vpid.1.output
+#loadusr halmeter -s pin bldc.1.value
+loadusr halmeter -s signal rssi-reader-to-sigcheck
+#loadusr halmeter -s signal enable-vpids
+#loadusr halmeter -s pin ppid.1.enable
+#loadusr halmeter -s pin vpid.1.enable
+#loadusr halmeter -s pin plim.1.in
+#loadusr halmeter -s pin plim.1.out
+#loadusr halmeter -s pin plim.1.max
+#loadusr halmeter -s pin plim.1.min
 #loadusr halmeter -s pin scale.13.gain
 #loadusr halmeter -s pin scale.13.out
-#loadusr halmeter -s pin ppid.1.error
-#loadusr halmeter -s pin ppid.1.errorI
-#loadusr halmeter -s pin vpid.1.error
-#loadusr halmeter -s pin vpid.1.errorI
+loadusr halmeter -s pin ppid.1.error
+loadusr halmeter -s pin ppid.1.errorI
+loadusr halmeter -s pin vpid.1.error
+loadusr halmeter -s pin vpid.1.errorI
 
 #loadusr halmeter -s pin hm2_de0n.0.encoder.00.velocity
 #loadusr halmeter -s pin ppid.1.command
 #loadusr halmeter -s pin ppid.0.feedback
 #loadusr halmeter -s pin muxn.0.sel
 #loadusr halmeter -s pin muxn.0.in1
-#loadusr halmeter -s pin steptrack.1.out
 #loadusr halmeter -s pin angle_and.out
 #loadusr halmeter -s pin angle_and.in0
 #loadusr halmeter -s pin angle_and.in1
