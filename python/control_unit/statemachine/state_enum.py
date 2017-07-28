@@ -16,3 +16,4 @@ class Manual(Enum):
     position = 1
     velocity = 2
     tracking = 3
+    gps_manual = 4

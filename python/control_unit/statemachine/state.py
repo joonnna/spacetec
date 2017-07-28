@@ -313,6 +313,8 @@ class Statemachine():
             self.set_state(Manual.velocity)
         elif val == 3:
             self.set_state(Manual.tracking)
+        elif val == 4:
+            self.set_state(Manual.gps_manual)
         else:
             self.logger.Error("Received undefined state value in manual state callback, exiting manual for safety reasons")
             self.set_state(Manual.stop)
@@ -682,7 +684,6 @@ class Statemachine():
         self.set_el_pos_limits(self.max_el, self.min_el)
 
     def calibrate(self):
-        """
         self.logger.info("Calibrating")
         self.logger.info("Waiting for az bldc init")
         self.wait_for_az_init()
@@ -693,7 +694,7 @@ class Statemachine():
         self.enable_az_pids()
 
         self.calibrate_az()
-        """
+
         self.logger.info("Waiting for el bldc init")
         self.wait_for_el_init()
         self.logger.info("Bldc el init done!")
@@ -765,7 +766,7 @@ class Statemachine():
             vel_mux = 2
             gps_mux = 0
             self.set_tracking_threshold()
-        elif self.state == State.gps or self.state == Override.gps_override:
+        elif self.state == State.gps or self.state == Override.gps_override or self.state == Manual.gps_manual:
             vel_mux = 2
             gps_mux = 1
             self.set_gps_threshold()
@@ -866,7 +867,7 @@ class Statemachine():
 
                 state = self.get_state()
 
-                if state == Manual.position or state == Manual.velocity:
+                if isinstance(state, Manual) and state != Manual.tracking:
                     pass
                 elif state == Override.idle or state == Override.calibrating:
                     pass

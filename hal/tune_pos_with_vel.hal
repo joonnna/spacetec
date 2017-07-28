@@ -52,6 +52,15 @@ setp hm2_de0n.0.gpio.042.is_output TRUE
 setp hm2_de0n.0.gpio.043.is_output TRUE
 setp hm2_de0n.0.gpio.044.is_output TRUE
 
+
+setp hm2_de0n.0.gpio.035.out TRUE
+setp hm2_de0n.0.gpio.037.out TRUE
+setp hm2_de0n.0.gpio.039.out TRUE
+setp hm2_de0n.0.gpio.035.is_output TRUE
+setp hm2_de0n.0.gpio.037.is_output TRUE
+setp hm2_de0n.0.gpio.039.is_output TRUE
+
+
 # set bldc scale and poles
 setp bldc.0.scale 2048
 setp bldc.0.poles 8
@@ -232,6 +241,10 @@ loadusr halscope
 
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.velocity
+
+
+loadusr halmeter -s pin hm2_de0n.0.encoder.00.position
+loadusr halmeter -s pin hm2_de0n.0.encoder.00.velocity
 
 
 # Haltalk

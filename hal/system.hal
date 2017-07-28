@@ -97,6 +97,14 @@ setp hm2_de0n.0.gpio.042.is_output TRUE
 setp hm2_de0n.0.gpio.043.is_output TRUE
 setp hm2_de0n.0.gpio.044.is_output TRUE
 
+setp hm2_de0n.0.gpio.035.out TRUE
+setp hm2_de0n.0.gpio.037.out TRUE
+setp hm2_de0n.0.gpio.039.out TRUE
+setp hm2_de0n.0.gpio.035.is_output TRUE
+setp hm2_de0n.0.gpio.037.is_output TRUE
+setp hm2_de0n.0.gpio.039.is_output TRUE
+
+
 # set bldc scale and poles
 setp bldc.0.scale 2048
 setp bldc.0.poles 8
@@ -153,6 +161,9 @@ setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
+
+setp steptrack.0.frequency [STEPTRACK]STEP_FREQUENCY
+setp steptrack.1.frequency [STEPTRACK]STEP_FREQUENCY
 
 #setp near.0.difference [NEAR_ZERO]DIFF
 #setp near.1.difference [NEAR_ZERO]DIFF
@@ -412,9 +423,15 @@ start
 # Haltalk
 #loadusr halscope
 loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
-loadusr halmeter -s pin muxn.1.out
 loadusr halmeter -s pin muxn.1.in1
 loadusr halmeter -s pin steptrack.1.out
+loadusr halmeter -s pin scale.13.out
+
+loadusr halmeter -s pin hm2_de0n.0.encoder.00.position
+loadusr halmeter -s pin muxn.0.in1
+loadusr halmeter -s pin steptrack.0.out
+loadusr halmeter -s pin scale.12.out
+
 #loadusr halmeter -s pin vpid.1.output
 #loadusr halmeter -s pin bldc.1.value
 loadusr halmeter -s signal rssi-reader-to-sigcheck
@@ -427,10 +444,10 @@ loadusr halmeter -s signal rssi-reader-to-sigcheck
 #loadusr halmeter -s pin plim.1.min
 #loadusr halmeter -s pin scale.13.gain
 #loadusr halmeter -s pin scale.13.out
-loadusr halmeter -s pin ppid.1.error
-loadusr halmeter -s pin ppid.1.errorI
-loadusr halmeter -s pin vpid.1.error
-loadusr halmeter -s pin vpid.1.errorI
+#loadusr halmeter -s pin ppid.1.error
+#loadusr halmeter -s pin ppid.1.errorI
+#loadusr halmeter -s pin vpid.1.error
+#loadusr halmeter -s pin vpid.1.errorI
 
 #loadusr halmeter -s pin hm2_de0n.0.encoder.00.velocity
 #loadusr halmeter -s pin ppid.1.command
