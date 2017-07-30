@@ -37,7 +37,6 @@ class Statemachine():
         config = read_config()
         self.set_config(config)
 
-
         logging.basicConfig(filename="/var/log/statemachine.log", level=logging.DEBUG)
         self.logger = logging.getLogger("state")
 
@@ -59,19 +58,6 @@ class Statemachine():
         self._search_and_bind()
 
         self.set_state(Override.calibrating)
-
- #       self.set_el_pos_limits(100000000000.0, -1000000000.0)
-
-        #time.sleep(20)
-        #time.sleep(10)
- #       time.sleep(1)
-  #      self.reset_el_encoder()
-   #     time.sleep(20)
-    #    self.set_el_gains()
-
-        #while True:
-         #   time.sleep(2)
-
 
         self.calibrate()
         self.start_pos_thread()
@@ -132,8 +118,8 @@ class Statemachine():
         pid_control.newpin("az_enable",  halremote.HAL_BIT, halremote.HAL_OUT)
         pid_control.newpin("el_enable",  halremote.HAL_BIT, halremote.HAL_OUT)
 
-        #poller = halremote.RemoteComponent("rssi-reader", debug=False)
-        #poller.newpin("value", halremote.HAL_FLOAT, halremote.HAL_OUT)
+       # poller = halremote.RemoteComponent("rssi-reader", debug=False)
+       # poller.newpin("value", halremote.HAL_FLOAT, halremote.HAL_OUT)
 
         self.halrcomps[pid_control.name] = pid_control
         #self.halrcomps[poller.name] = poller

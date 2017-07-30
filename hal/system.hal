@@ -49,6 +49,10 @@ waitbound set-angle
 waitexists rssi-reader
 waitbound rssi-reader
 
+waitexists beagle-angles
+waitbound beagle-angles
+
+
 ###########################
 #BLDC/HOSTMOT CONFIG START#
 ###########################
@@ -207,7 +211,7 @@ net set-angle-to-nears set-angle.angle_out near.2.difference near.3.difference
 #setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
 #setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
 
-net const-to-python constant.0.out pos-comps.north_angle
+net const-to-python constant.0.out pos-comps.north_angle beagle-angles.north
 
 #############################
 #ANGLE/SIGNAL THRESHOLDS END#
@@ -325,8 +329,8 @@ net vsel.1 velmux.el_sel vmuxn.1.sel
 net convert-antenna-angle.0 scale.12.out scale.0.in
 net convert-antenna-angle.1 scale.13.out scale.2.in
 
-net abspos.0 scale.0.out abspos.az_in abs.0.in steptrack.0.in1 motor-feedback.az_pos
-net abspos.1 scale.2.out abspos.el_in abs.1.in steptrack.1.in1 motor-feedback.el_pos
+net abspos.0 scale.0.out abspos.az_in abs.0.in steptrack.0.in1 motor-feedback.az_pos beagle-angles.az
+net abspos.1 scale.2.out abspos.el_in abs.1.in steptrack.1.in1 motor-feedback.el_pos beagle-angles.el
 
 net reset.0 abspos.az_reset scale.0.offset
 net reset.1 abspos.el_reset scale.2.offset
