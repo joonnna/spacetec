@@ -123,8 +123,10 @@ class Statemachine():
         el_init.on_value_changed.append(self.el_init_done)
 
         gps_angle_check = halremote.RemoteComponent("set-angle", debug=False)
-        gps_angle_check.newpin("az_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
-        gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
+        gps_angle_check.newpin("enter_gps_angle", halremote.HAL_FLOAT, halremote.HAL_IN)
+        gps_angle_check.newpin("re_enter_tracking_angle", halremote.HAL_FLOAT, halremote.HAL_IN)
+        gps_angle_check.newpin("angle_out", halremote.HAL_FLOAT, halremote.HAL_IO)
+        #gps_angle_check.newpin("el_angle", halremote.HAL_FLOAT, halremote.HAL_IO)
 
         pid_control = halremote.RemoteComponent("pid-control", debug=False)
         pid_control.newpin("az_enable",  halremote.HAL_BIT, halremote.HAL_OUT)
@@ -429,6 +431,10 @@ class Statemachine():
         if az_command > 180.0:
             az_command = az_command - 360.0
 
+     #   self.logger.debug(el)
+      #  az = 0.0
+       # el = 45.0
+
         mux = self.halrcomps["gpsmux"]
         mux.getpin("az_gps").set(az_command)
         mux.getpin("el_gps").set(el)
@@ -481,11 +487,8 @@ class Statemachine():
         self.el_max_velocity = config["el_max_velocity"]
         self.el_min_velocity = config["el_min_velocity"]
 
-        self.az_gps_limit = config["az_lim"]
-        self.el_gps_limit = config["el_lim"]
-
-        self.az_re_enter_limit = config["az_re_enter_limit"]
-        self.el_re_enter_limit = config["el_re_enter_limit"]
+        self.enter_limit = config["enter_limit"]
+        self.re_enter_limit = config["re_enter_limit"]
 
         self.az_range = config["az_range"]
         self.el_range = config["el_range"]
@@ -625,8 +628,8 @@ class Statemachine():
 
         self.reset_az_encoder()
         self.send_az_calibrate_pos(0.0)
-        max = abs(mid) - 1.0
-        min = -abs(mid) + 1.0
+        max = abs(mid) - 2.0
+        min = -abs(mid) + 2.0
         self.logger.info("max: %f min: %f" % (max, min))
         self.set_az_pos_limits(max, min)
 
@@ -721,14 +724,16 @@ class Statemachine():
             return State.gps
 
     def set_tracking_threshold(self):
-        angle_comp = self.halrcomps["set-angle"]
-        angle_comp.getpin("az_angle").set(self.az_gps_limit)
-        angle_comp.getpin("el_angle").set(self.el_gps_limit)
+        comp  = self.halrcomps["set-angle"]
+        pin  = comp.getpin("angle_out")
+        pin.set(comp.getpin("enter_gps_angle").get())
+        self.busy_wait(pin)
 
     def set_gps_threshold(self):
-        angle_comp = self.halrcomps["set-angle"]
-        angle_comp.getpin("az_angle").set(self.az_re_enter_limit)
-        angle_comp.getpin("el_angle").set(self.el_re_enter_limit)
+        comp  = self.halrcomps["set-angle"]
+        pin  = comp.getpin("angle_out")
+        pin.set(comp.getpin("re_enter_tracking_angle").get())
+        self.busy_wait(pin)
 
     def set_state(self, new_state):
         self.state_lock.acquire()

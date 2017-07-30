@@ -1,5 +1,5 @@
-newthread fpthread fp 300000 
-#50000
+newthread fpthread fp 50000 #300000 
+#5000
 loadrt limit1 count=4
 loadrt limit2 count=2
 loadrt pid names=vpid.0,vpid.1,ppid.0,ppid.1
@@ -45,20 +45,20 @@ setp hm2_de0n.0.pwmgen.pwm_frequency 40000
 
 # ONLY FOR TESTBED
 # set motor driver enable high
-setp hm2_de0n.0.gpio.042.out TRUE
-setp hm2_de0n.0.gpio.043.out TRUE
-setp hm2_de0n.0.gpio.044.out TRUE
-setp hm2_de0n.0.gpio.042.is_output TRUE
-setp hm2_de0n.0.gpio.043.is_output TRUE
-setp hm2_de0n.0.gpio.044.is_output TRUE
+#setp hm2_de0n.0.gpio.042.out TRUE
+#setp hm2_de0n.0.gpio.043.out TRUE
+#setp hm2_de0n.0.gpio.044.out TRUE
+#setp hm2_de0n.0.gpio.042.is_output TRUE
+#setp hm2_de0n.0.gpio.043.is_output TRUE
+#setp hm2_de0n.0.gpio.044.is_output TRUE
 
 
-setp hm2_de0n.0.gpio.035.out TRUE
-setp hm2_de0n.0.gpio.037.out TRUE
-setp hm2_de0n.0.gpio.039.out TRUE
-setp hm2_de0n.0.gpio.035.is_output TRUE
-setp hm2_de0n.0.gpio.037.is_output TRUE
-setp hm2_de0n.0.gpio.039.is_output TRUE
+#setp hm2_de0n.0.gpio.035.out TRUE
+#setp hm2_de0n.0.gpio.037.out TRUE
+#setp hm2_de0n.0.gpio.039.out TRUE
+#setp hm2_de0n.0.gpio.035.is_output TRUE
+#setp hm2_de0n.0.gpio.037.is_output TRUE
+#setp hm2_de0n.0.gpio.039.is_output TRUE
 
 
 # set bldc scale and poles
@@ -188,9 +188,12 @@ setp vpid.0.Igain 0.02
 
 setp ppid.1.maxerror 50
 setp ppid.1.maxerrorI 10
-setp ppid.1.Pgain 7
-setp ppid.1.Igain 0.1
-setp ppid.1.Dgain 20
+#setp ppid.1.Pgain 7
+#setp ppid.1.Igain 0.1
+#setp ppid.1.Dgain 20
+setp ppid.1.Pgain 5.0
+setp ppid.1.Igain 3.0
+
 
 setp vpid.1.maxerror 200
 setp vpid.1.maxerrorI 50

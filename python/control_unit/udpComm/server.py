@@ -54,7 +54,11 @@ class Communication():
         except ValueError:
             self.logger.error("Can't convert gps data to floats, abort?")
             return None
+        except IndexError:
+            self.logger.error("Index out of range, data_len: %f" % (len(data)))
+            return None
 
+        #self.logger.debug("%f , %f, %f, %f " % (longtitude, latitude, height, len(data)))
         return (longtitude, latitude, height)
 
     def shutdown(self):

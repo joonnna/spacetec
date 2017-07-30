@@ -17,7 +17,7 @@ loadrt steptrack count=2
 loadrt near count=6
 loadrt set_velocity count=2
 loadrt and2 names=angle_and,state_and
-loadrt constant
+loadrt constant names=constant.0,gps_const,track_const
 
 
 loadusr haltalk
@@ -142,13 +142,9 @@ setp scale.9.offset 0.5
 net encoder.0.reset hm2_de0n.0.encoder.00.reset motor-feedback.reset_az
 net encoder.1.reset hm2_de0n.0.encoder.01.reset motor-feedback.reset_el
 
-# Assume we start in GPS mode
-setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
-setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
-
 # Angle threshold between gps/tracking
-net az_angle set-angle.az_angle near.2.difference
-net el_angle set-angle.el_angle near.3.difference
+#net az_angle set-angle.az_angle near.2.difference
+#net el_angle set-angle.el_angle near.3.difference
 
 net angle-to-state angle_and.out state_and.in0
 net sig-to-state sigcheck.0.out2 state_and.in1
@@ -196,6 +192,20 @@ net max_el pos-comps.max_el plim.1.max near.5.in2
 net min_el pos-comps.min_el plim.1.min
 
 setp constant.0.value [COMPASS_OFFSET]AZ_OFFSET
+
+setp gps_const.value [GPS_LIMITS]ENTER_LIMIT
+setp track_const.value [GPS_LIMITS]RE_ENTER_LIMIT
+
+setp set-angle.angle_out [GPS_LIMITS]RE_ENTER_LIMIT
+
+net enter-angle gps_const.out set-angle.enter_gps_angle
+net re-enter-angle track_const.out set-angle.re_enter_tracking_angle
+
+net set-angle-to-nears set-angle.angle_out near.2.difference near.3.difference
+
+# Assume we start in GPS mode
+#setp near.2.difference [GPS_LIMITS]AZ_RE_ENTER_LIMIT
+#setp near.3.difference [GPS_LIMITS]EL_RE_ENTER_LIMIT
 
 net const-to-python constant.0.out pos-comps.north_angle
 
@@ -355,6 +365,8 @@ addf angle_and fast_thread
 
 # fast threads
 addf constant.0 fast_thread
+addf gps_const fast_thread
+addf track_const fast_thread
 
 addf abs.0 fast_thread
 addf abs.1 fast_thread
@@ -426,11 +438,13 @@ loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
 loadusr halmeter -s pin muxn.1.in1
 loadusr halmeter -s pin steptrack.1.out
 loadusr halmeter -s pin scale.13.out
+loadusr halmeter -s pin near.3.difference
 
 loadusr halmeter -s pin hm2_de0n.0.encoder.00.position
 loadusr halmeter -s pin muxn.0.in1
 loadusr halmeter -s pin steptrack.0.out
 loadusr halmeter -s pin scale.12.out
+loadusr halmeter -s pin near.2.difference
 
 #loadusr halmeter -s pin vpid.1.output
 #loadusr halmeter -s pin bldc.1.value
