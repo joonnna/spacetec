@@ -118,8 +118,8 @@ class Statemachine():
         pid_control.newpin("az_enable",  halremote.HAL_BIT, halremote.HAL_OUT)
         pid_control.newpin("el_enable",  halremote.HAL_BIT, halremote.HAL_OUT)
 
-       # poller = halremote.RemoteComponent("rssi-reader", debug=False)
-       # poller.newpin("value", halremote.HAL_FLOAT, halremote.HAL_OUT)
+        #poller = halremote.RemoteComponent("rssi-reader", debug=False)
+        #poller.newpin("value", halremote.HAL_FLOAT, halremote.HAL_OUT)
 
         self.halrcomps[pid_control.name] = pid_control
         #self.halrcomps[poller.name] = poller

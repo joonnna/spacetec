@@ -39,26 +39,33 @@ class Communication():
         self._long_end       = 180
         self._lat_start      = 182
         self._lat_end        = 190
-        self._height_start   = 192
+        self._height_start   = 191
         self._height_end     = 198
 
         self.logger.info("Inited udp server")
 
     def _receive_data(self):
+        f = open("test", "a")
         data, addr = self._socket.recvfrom(1024)
 
         try:
             longtitude = float(data[self._long_start:self._long_end])
             latitude = float(data[self._lat_start:self._lat_end])
-            height = float(data[self._height_start:self._height_end])
+            height_str = data[self._height_start:self._height_end].strip()
+            height = float(height_str)
         except ValueError:
             self.logger.error("Can't convert gps data to floats, abort?")
+            self.logger.error(data)
+            f.write(data)
             return None
         except IndexError:
             self.logger.error("Index out of range, data_len: %f" % (len(data)))
+            self.logger.error(data)
+            f.write(data)
             return None
-
-        #self.logger.debug("%f , %f, %f, %f " % (longtitude, latitude, height, len(data)))
+        f.write(data)
+        f.close()
+        self.logger.debug("%f , %f, %f, %f " % (longtitude, latitude, height, len(data)))
         return (longtitude, latitude, height)
 
     def shutdown(self):

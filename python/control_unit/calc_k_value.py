@@ -1,14 +1,18 @@
 import math
-x = 0.0
+sig = 0.0
 try:
     k = 0.0001
     while True:
-        if x > 2.9999 and x < 3.1:
+        if sig < -2.998 and sig > -3.03:
             break
-        x = math.acos(0.08727) * k
+
+        x = math.radians(5.0) * k
+        right = (abs(math.sin(x))/x)
+        sig = 10 * math.log10(right)
         k = k + 0.001
+
 except KeyboardInterrupt:
     pass
 
-print x
+print sig
 print k
