@@ -10,6 +10,7 @@ import ConfigParser
 
 class RssiPoller():
     def __init__(self):
+<<<<<<< HEAD
         self.sig_sim = True
         logging.basicConfig(filename="/var/log/rssipoller.log", level=logging.DEBUG)
         self.logger = logging.getLogger("rssipoller")
@@ -41,10 +42,6 @@ class RssiPoller():
 
         self.sd.start()
         rssi_reader.bind_component()
-
-        if self.sig_sim:
-            self.angles.bind_component()
-            self.logger.info("Bound simulating angles")
 
         timeout = 5.0
         while not rssi_reader.wait_connected(timeout):
@@ -273,10 +270,10 @@ class RssiPoller():
                 value = value + (float(content[0])/self.relative_value)
                 counter = counter + 1.0
             except IOError, msg:
-                self.logger.error("ADC file problems : %s" % (msg))
+         #       self.logger.error("ADC file problems : %s" % (msg))
                 return 0.0
             except ValueError, msg:
-                self.logger.error("Float errors : %s" % (msg))
+          #      self.logger.error("Float errors : %s" % (msg))
                 return 0.0
 
         #self.logger.debug(counter)

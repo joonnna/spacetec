@@ -18,14 +18,11 @@ def read_config():
     dict["el_max_velocity"] = config.getfloat("EL_VEL_LIMITS", "MAX")
     dict["el_min_velocity"] = config.getfloat("EL_VEL_LIMITS", "MIN")
 
-    dict["az_lim"] = config.getfloat("GPS_LIMITS", "AZ_LIM")
-    dict["el_lim"] = config.getfloat("GPS_LIMITS", "EL_LIM")
+    dict["enter_limit"] = config.getfloat("GPS_LIMITS", "ENTER_LIMIT")
+    dict["re_enter_limit"] = config.getfloat("GPS_LIMITS", "RE_ENTER_LIMIT")
 
     dict["max_el"] = config.getfloat("EL_POS_LIMITS", "MAX")
     dict["min_el"] = config.getfloat("EL_POS_LIMITS", "MIN")
-
-    dict["az_re_enter_limit"] = config.getfloat("GPS_LIMITS", "AZ_RE_ENTER_LIMIT")
-    dict["el_re_enter_limit"] = config.getfloat("GPS_LIMITS", "EL_RE_ENTER_LIMIT")
 
     dict["az_range"] = config.getfloat("AXIS_RANGE", "AZ_RANGE")
     dict["el_range"] = config.getfloat("AXIS_RANGE", "EL_RANGE")
@@ -46,5 +43,10 @@ def read_config():
     dict["normal_diff"] = config.getfloat("NEAR_ENDSTOP_VALUES", "NORMAL_DIFF")
 
     dict["gps_max_timeout"] = config.getfloat("GPS_TIMEOUT", "MAX_TIME_BETWEEN_PACKETS")
+
+
+    dict["wait_period"] = config.getfloat("NEAR_ENDSTOP_VALUES", "WAIT_PERIOD")
+    dict["change_threshold"] = config.getfloat("NEAR_ENDSTOP_VALUES", "CHANGE_THRESHOLD")
+
 
     return dict

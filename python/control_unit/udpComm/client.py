@@ -58,6 +58,6 @@ class Udpclient():
                         continue
 
                     self.send_msg(line)
-                    time.sleep(0.1)
+                    time.sleep(1)
         except KeyboardInterrupt:
             return

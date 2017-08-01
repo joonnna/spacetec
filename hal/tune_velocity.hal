@@ -1,7 +1,9 @@
-newthread fpthread fp 50000
+newthread fpthread fp 500000
 loadrt limit1 count=2
 loadrt limit2 count=2
 loadrt pid names=vpid.0,vpid.1
+loadrt scale count=10
+
 
 #########################
 #BLDC/HOSTMOT CONFIG START
@@ -12,7 +14,6 @@ loadrt hostmot2
 newinst hm2_soc_ol hm2-socfpga0 -- config="firmware=socfpga/dtbo/DE0_Nano_SoC_DB25.Starburst.dtbo num_stepgens=0"
 
 loadrt bldc cfg=q,q
-loadrt scale count=6
 
 # bldc to scale
 net bldc.0_A-to-scale bldc.0.A-value => scale.0.in
@@ -43,19 +44,23 @@ setp hm2_de0n.0.pwmgen.pwm_frequency 40000
 
 # ONLY FOR TESTBED
 # set motor driver enable high
-setp hm2_de0n.0.gpio.042.out TRUE
-setp hm2_de0n.0.gpio.043.out TRUE
-setp hm2_de0n.0.gpio.044.out TRUE
-setp hm2_de0n.0.gpio.042.is_output TRUE
-setp hm2_de0n.0.gpio.043.is_output TRUE
-setp hm2_de0n.0.gpio.044.is_output TRUE
+#setp hm2_de0n.0.gpio.042.out TRUE
+#setp hm2_de0n.0.gpio.043.out TRUE
+#setp hm2_de0n.0.gpio.044.out TRUE
+#setp hm2_de0n.0.gpio.042.is_output TRUE
+#setp hm2_de0n.0.gpio.043.is_output TRUE
+#setp hm2_de0n.0.gpio.044.is_output TRUE
 
 # set bldc scale and poles
 setp bldc.0.scale 2048
 setp bldc.0.poles 8
 
-setp hm2_de0n.0.encoder.00.scale 11.37
-setp hm2_de0n.0.encoder.01.scale 11.37
+setp bldc.1.scale 2048
+setp bldc.1.poles 8
+
+
+setp hm2_de0n.0.encoder.00.scale 11.7777777#-199.111111
+setp hm2_de0n.0.encoder.01.scale 11.7777777 #-199.111111 #-113.777777
 #setp hm2_de0n.0.encoder.01.scale 4096/360*10
 
 # encoder rawcount to bldc
@@ -63,8 +68,12 @@ net encoder.0.rawcount-to-bldc hm2_de0n.0.encoder.00.rawcounts => bldc.0.rawcoun
 net encoder.1.rawcount-to-bldc hm2_de0n.0.encoder.01.rawcounts => bldc.1.rawcounts
 
 # encoder velocity to velocity pid
-net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity => vpid.0.feedback
-net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity => vpid.1.feedback
+net encoder.0.vel-to-pid hm2_de0n.0.encoder.00.velocity scale.7.in
+net encoder.1.vel-to-pid hm2_de0n.0.encoder.01.velocity scale.9.in
+
+net scale-to-vpid.0 scale.7.out vpid.0.feedback
+net scale-to-vpid.1 scale.9.out vpid.1.feedback
+
 
 # set bldc to pwmgen scale gain
 setp scale.0.gain 0.5
@@ -73,6 +82,18 @@ setp scale.2.gain 0.5
 setp scale.3.gain 0.5
 setp scale.4.gain 0.5
 setp scale.5.gain 0.5
+
+setp scale.6.gain 1.0 #-17.5
+setp scale.7.gain 1.0 #-17.5
+setp scale.8.gain 1.0 # -17.5 #-10.0
+setp scale.9.gain 1.0 #-17.5 #-10.0
+
+setp scale.6.offset 0.0
+setp scale.7.offset 0.0
+setp scale.8.offset 0.0
+setp scale.9.offset 0.0
+
+
 
 # set bldc to pwmgen scale offset
 setp scale.0.offset 0.5
@@ -91,22 +112,29 @@ setp scale.5.offset 0.5
 #LIM VALUES START
 ################
 
-net limit1-to-vpid.0 limit2.0.out vpid.0.command
-net limit1-to-vpid.1 limit1.1.out vpid.1.command
 
-setp limit2.0.max 700.0
-setp limit2.0.maxv 10.0
-setp limit2.0.min -700
+net limit2-to-vpid.0 limit2.0.out vpid.0.command
+net limit2-to-vpid.1 limit2.1.out vpid.1.command
 
-setp limit2.1.max 1.0
-setp limit2.1.maxv 1.0
-setp limit2.1.min -1.0
+net vpid-to-lim.0 vpid.0.output limit1.0.in
+net vpid-to-lim.1 vpid.1.output limit1.1.in
 
-setp limit1.0.max 700.0
-setp limit1.0.min -700.0
+net lim-to-bldc.0 limit1.0.out bldc.0.value
+net lim-to-bldc.1 limit1.1.out bldc.1.value
+
+setp limit1.0.max 1.0
+setp limit1.0.min -1.0
 
 setp limit1.1.max 1.0
 setp limit1.1.min -1.0
+
+setp limit2.0.max 700.0
+setp limit2.0.maxv 100.0
+setp limit2.0.min -700
+
+setp limit2.1.max 700.0
+setp limit2.1.maxv 100.0
+setp limit2.1.min -700.0
 
 ##############
 #LIM VALUES END
@@ -118,22 +146,17 @@ setp limit1.1.min -1.0
 setp vpid.0.enable true
 setp vpid.1.enable true
 
-setp vpid.0.Pgain 0.001
-setp vpid.0.Igain 0.005
 setp vpid.0.maxerror 200
 setp vpid.0.maxerrorI 50
 setp vpid.0.maxoutput 1
-setp vpid.0.Dgain 20
+setp vpid.0.Pgain 0.001
+setp vpid.0.Igain 0.02
 
-setp vpid.1.Pgain 0
-setp vpid.1.Igain 0
-setp vpid.1.Dgain 0
-
-net vpid-to-bldc.0 vpid.0.output bldc.0.value
-#net vpid-to-bldc.1 vpid.1.output bldc.1.value
-
-#net vpid-to-lim vpid.0.output limit2.0.in
-#net lim-to-bldc limit2.0.out bldc.0.value
+setp vpid.1.maxerror 200
+setp vpid.1.maxerrorI 50
+setp vpid.1.maxoutput 1
+setp vpid.1.Pgain 0.001
+setp vpid.1.Igain 0.02
 
 ##############
 #PID VALUES END
@@ -152,6 +175,11 @@ addf scale.3.funct fpthread
 addf scale.4.funct fpthread
 addf scale.5.funct fpthread
 
+addf scale.6.funct fpthread
+addf scale.7.funct fpthread
+addf scale.8.funct fpthread
+addf scale.9.funct fpthread
+
 addf limit1.0 fpthread
 addf limit1.1 fpthread
 
@@ -163,7 +191,9 @@ addf vpid.1.do-pid-calcs fpthread
 
 start
 loadusr halscope
-loadusr halmeter
+
+loadusr halmeter -s pin hm2_de0n.0.encoder.01.position
+loadusr halmeter -s pin hm2_de0n.0.encoder.01.velocity
 
 # Haltalk
 loadusr haltalk
