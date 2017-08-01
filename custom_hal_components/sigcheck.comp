@@ -3,6 +3,8 @@ pin in float in;
 pin out float out0;
 pin out float out1;
 pin out bit out2;
+param rw float prev_az_sig;
+param rw float prev_el_sig;
 param rw float sig_limit;
 param rw float re_enter_limit;
 param rw float enter_limit;
@@ -23,13 +25,19 @@ else
 
 if (axis)
 {
-    out0 = in;
+    //out0 = in;
+
+    prev_el_sig = in;
+    out0 = prev_az_sig;
     out1 = -1.0;
     axis = false;
 }
 else
 {
-    out1 = in;
+    //out1 = in;
+
+    prev_az_sig = in;
+    out1 = prev_el_sig;
     out0 = -1.0;
     axis = true;
 }
