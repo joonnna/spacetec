@@ -2,11 +2,11 @@ from client import *
 
 client = Udpclient()
 
-data = "/home/machinekit/machinekit/spacetec/data_files/ptudata"
+data = "/home/machinekit/machinekit/spacetec/python/control_unit/test"
 
 client.run(data)
 
-
+"""
 Traceback (most recent call last):
 File "/usr/lib/python2.7/threading.py", line 810, in __bootstrap_inner
     self.run()
@@ -23,4 +23,4 @@ File "/usr/local/lib/python2.7/dist-packages/fysom/__init__.py", line 296, in _t
 File "/usr/local/lib/python2.7/dist-packages/fysom/__init__.py", line 345, in _enter_state
     for fnname in ['onenter' + e.dst, 'on' + e.dst]:
     TypeError: cannot concatenate 'str' and 'bool' objects
-
+"""

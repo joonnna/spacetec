@@ -162,8 +162,8 @@ setp sigcheck.0.enter-limit [SIGNAL]SIGNAL_LIMIT
 setp steptrack.0.step-length [STEPTRACK]STEP_LENGTH
 setp steptrack.1.step-length [STEPTRACK]STEP_LENGTH
 
-setp steptrack.0.frequency [STEPTRACK]STEP_FREQUENCY
-setp steptrack.1.frequency [STEPTRACK]STEP_FREQUENCY
+setp sigcheck.0.frequency [STEPTRACK]STEP_FREQUENCY
+#setp steptrack.1.frequency [STEPTRACK]STEP_FREQUENCY
 
 #setp near.0.difference [NEAR_ZERO]DIFF
 #setp near.1.difference [NEAR_ZERO]DIFF

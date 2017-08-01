@@ -304,7 +304,7 @@ class Statemachine():
         elif val == 4:
             self.set_state(Manual.gps_manual)
         else:
-            self.logger.Error("Received undefined state value in manual state callback, exiting manual for safety reasons")
+            self.logger.error("Received undefined state value in manual state callback, exiting manual for safety reasons")
             self.set_state(Manual.stop)
 
 
@@ -660,7 +660,7 @@ class Statemachine():
         self.logger.info("Found mid point: %f" % (temp2))
         self.reset_el_encoder()
 
-        final_angle = -90.0
+        final_angle = -88.0
         self.send_el_calibrate_pos(final_angle)
         self.logger.info("Going to 90 degrees...")
 

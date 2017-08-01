@@ -9,9 +9,12 @@ param rw float sig_limit;
 param rw float re_enter_limit;
 param rw float enter_limit;
 param rw bit axis;
+param rw s32 counter;
+param rw s32 frequency;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
+
 if (in > sig_limit)
 {
     sig_limit = enter_limit;
@@ -23,21 +26,30 @@ else
     out2 = false;
 }
 
-if (axis)
+counter = ((counter + 1) % (frequency + 1));
+if (counter == frequency)
 {
-    //out0 = in;
+    if (axis)
+    {
+        //out0 = in;
 
-    prev_el_sig = in;
-    out0 = prev_az_sig;
-    out1 = -1.0;
-    axis = false;
+        prev_el_sig = in;
+        out0 = prev_az_sig;
+        out1 = -1.0;
+        axis = false;
+    }
+    else
+    {
+        //out1 = in;
+
+        prev_az_sig = in;
+        out1 = prev_el_sig;
+        out0 = -1.0;
+        axis = true;
+    }
 }
 else
 {
-    //out1 = in;
-
-    prev_az_sig = in;
-    out1 = prev_el_sig;
     out0 = -1.0;
-    axis = true;
+    out1 = -1.0;
 }

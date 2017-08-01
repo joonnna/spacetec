@@ -8,44 +8,44 @@ param rw float prev;
 param rw float prev_out;
 param rw bit direction;
 param rw float step_length;
-param rw s32 counter;
-param rw s32 frequency;
+//param rw s32 counter;
+//param rw s32 frequency;
 function _;
 license "GPL"; // indicates GPL v2 or later
 ;;
-counter = ((counter + 1) % (frequency + 1));
-if (counter == frequency)
+//counter = ((counter + 1) % (frequency + 1));
+//if (counter == frequency)
+//{
+//counter = 0;
+if (in0 != -1.0)
 {
-    counter = 0;
-    if (in0 != -1.0)
+    if (prev > in0)
     {
-        if (prev > in0)
+        if (direction)
         {
-            if (direction)
-            {
-                out = in1 - step_length;
-                direction = false;
-            }
-            else
-            {
-                out = in1 + step_length;
-                direction = true;
-            }
+            out = in1 - step_length;
+            direction = false;
         }
         else
         {
-            if (direction)
-                out = in1 + step_length;
-            else
-                out = in1 - step_length;
+            out = in1 + step_length;
+            direction = true;
         }
-        prev = in0;
-        test = prev;
-        prev_out = out;
     }
     else
     {
-        out = prev_out;
+        if (direction)
+            out = in1 + step_length;
+        else
+            out = in1 - step_length;
     }
-    dir = direction;
+    prev = in0;
+    test = prev;
+    prev_out = out;
 }
+else
+{
+    out = prev_out;
+}
+dir = direction;
+//}
