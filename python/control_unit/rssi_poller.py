@@ -1,5 +1,9 @@
 import logging
+import numpy
 import time
+import sys
+import math
+import socket
 from pymachinetalk.dns_sd import ServiceDiscovery
 import pymachinetalk.halremote as halremote
 import ConfigParser
@@ -10,6 +14,7 @@ class RssiPoller():
         logging.basicConfig(filename="/var/log/rssipoller.log", level=logging.DEBUG)
         self.logger = logging.getLogger("rssipoller")
         self.sd = ServiceDiscovery()
+        self.filepath = "/home/machinekit/machinekit/spacetec/data_files/ptudata"
 
         self.read_config()
 
@@ -39,17 +44,30 @@ class RssiPoller():
 
         if self.sig_sim:
             self.angles.bind_component()
+            self.logger.info("Bound simulating angles")
+
+        timeout = 5.0
+        while not rssi_reader.wait_connected(timeout):
+            self.logger.info("rssi-reader not connected, waiting")
+
+        if self.sig_sim:
+            while not self.angles.wait_connected(timeout):
+                self.logger.info("beagle-angles not connected, waiting")
 
 
         self.logger.info("Bound rssi-poller")
 
     def create_sig_sim(self):
-        angles = halremote.RemoteComponent("beagle-angles", debug=False)
-        az_angle.newpin("az", halremote.HAL_FLOAT, halremote.HAL_IN)
-        az_angle.newpin("el", halremote.HAL_FLOAT, halremote.HAL_IN)
-        self.sd.register(angles)
+        self.angles = halremote.RemoteComponent("beagle-angles", debug=False)
+        self.angles.newpin("az", halremote.HAL_FLOAT, halremote.HAL_IN)
+        self.angles.newpin("el", halremote.HAL_FLOAT, halremote.HAL_IN)
+        self.angles.newpin("north", halremote.HAL_FLOAT, halremote.HAL_IN)
+        self.sd.register(self.angles)
 
-    def extract_data(self, data)
+    def get_north_angle(self):
+        return self.angles.getpin("north").get()
+
+    def extract_data(self, data):
         time = float(data[0:6])
         long = float(data[171:180])
         lat = float(data[182:190])
@@ -57,33 +75,89 @@ class RssiPoller():
 
         return lat, long, height, time
 
+    def interpolate(self, y1, y3, x1, x3, x2):
+        try:
+            ret = ((((x2-x1)*(y3-y1))/(x3-x1))+y1)
+        except ZeroDivisionError:
+            return x1
+
+        return ret
+
+    def calc_sig(self, az_deg, el_deg, az2_deg, el2_deg):
+        az = math.radians(az_deg)
+        el = math.radians(el_deg)
+        az2 = math.radians(az2_deg)
+        el2 = math.radians(el2_deg)
+
+        val = math.acos(math.sin(el) * math.sin(el2) + math.cos(el) * math.cos(el2) * math.cos(az - az2))
+
+        self.logger.debug("Difference value: %f" % (math.degrees(val)))
+
+        k = 21.6851
+        x = val * k
+
+        right = (abs(math.sin(x))/x)
+        sig = 10 * math.log10(right)
+
+        return sig
+
+    def send_packet(self, data):
+        self.socket.sendto(data, ("128.39.133.72", 2729))
+
     def simulation(self):
-        current_lat =
-        current_long =
-        current_height =
-        current_time =
+        #time.sleep(60)
+        line_number = 1
+        f = open(self.filepath, "r")
+        data = f.read().split("\n")
+        f.close()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        next_lat =
-        next_long =
-        next_height =
-        next_time =
+        curr_lat, curr_long, curr_height, curr_time = self.extract_data(data[line_number])
+        prev_time = time.time()
+        self.send_packet(data[line_number])
+  #      curr_az, curr_el = self.calc_pos((curr_long, curr_lat, curr_height))
+        line_number = line_number + 1
 
-        while True:
-            interpolate_time = time.time()
+        next_lat, next_long, next_height, next_time = self.extract_data(data[line_number])
+        line_number = line_number + 1
 
-            lat = self.interpolate(current_lat, next_lat, current_time, next_time, interpolate_time)
-            long = self.interpolate(current_long, next_long, current_time, next_time, interpolate_time)
-            height = self.interpolate(current_height, next_height, current_time, next_time, interpolate_time)
+        try:
+            while True:
+                time.sleep(0.1)
+                interpolate_time = time.time() - prev_time
+                lat = self.interpolate(curr_lat, next_lat, curr_time, next_time, (curr_time + interpolate_time))
+                long = self.interpolate(curr_long, next_long, curr_time, next_time, (curr_time + interpolate_time))
+                height = self.interpolate(curr_height, next_height, curr_time, next_time, (curr_time + interpolate_time))
 
-            gps_az, gps_el = self.calc_pos((lat, long, height))
-            az = angles.getpin("az").get()
-            el = angles.getpin("el").get()
+                self.logger.debug("curr_lat: %.9f : next_lat: %.9f\n curr_long: %.9f : next_long: %.9f\n curr_height: %.9f : next_height: %.9f\n i-lat: %.9f i-long %.9f i-height: %.9f" % (curr_lat, next_lat, curr_long, next_long, curr_height, next_height, lat, long, height))
 
-            self.calc_sig(az, el, gps_az, gps_el)
+                gps_az, gps_el = self.calc_pos((long, lat, height))
+                prev_az = self.angles.getpin("az").get()
+                prev_el = self.angles.getpin("el").get()
 
-            if interpolate_time - current_time >= 1.0:
+                sig = self.calc_sig(gps_az, gps_el, prev_az, prev_el)
+                self.rssi_pin.set(sig)
+
+                self.logger.debug("i-gps: (%f, %f)\n antenna: (%f, %f)\n sig: %.9f" % (gps_az, gps_el, prev_az, prev_el, sig))
+
+                self.logger.debug("curr_time: %f : next_time %f\n interpolate_time: %f : prev_time: %f" % (curr_time, next_time, interpolate_time, prev_time))
+
+                if interpolate_time >= 1.0:
+                    try:
+                        curr_lat, curr_long, curr_height, curr_time = self.extract_data(data[line_number])
+                        prev_time = time.time()
+                        self.send_packet(data[line_number])
+ #                       curr_az, curr_el = self.calc_pos((curr_long, curr_lat, curr_height))
+                        line_number = line_number + 1
 
 
+                        next_lat, next_long, next_height, next_time = self.extract_data(data[line_number])
+                        line_number = line_number + 1
+                    except IndexError:
+                        return
+
+        except KeyboardInterrupt:
+            return
 
     def calc_pos(self, data):
         try:
@@ -96,6 +170,10 @@ class RssiPoller():
 
             f = (a-b)/a
             e_2 = 2*f - (f*f)
+
+            self.loc_lat = 69.29589
+            self.loc_long = 16.03037
+            self.loc_height = 7.0
 
             lat_0 = math.radians(self.loc_lat)
             lon_0 = math.radians(self.loc_long)
@@ -170,13 +248,15 @@ class RssiPoller():
             return self.prev_az, self.prev_el, height
 
 
+        final_az = final_az + self.get_north_angle()
+        if final_az > 180.0:
+            final_az = final_az - 360.0
+
         self.prev_az = final_az
         self.prev_el = el_deg
 
+
         return final_az, el_deg
-
-
-
 
 
     def read_adc(self, prev):
@@ -201,13 +281,13 @@ class RssiPoller():
 
         #self.logger.debug(counter)
         output_value = value / counter
-
-        if abs((output_value - prev)) < self.prev_offset:
-            self.rssi_pin.set(prev)
-            return prev
-        else:
-            self.rssi_pin.set(output_value)
-            return output_value
+        return output_value
+        #if abs((output_value - prev)) < self.prev_offset:
+        #    self.rssi_pin.set(prev)
+        #    return prev
+        #else:
+        #    self.rssi_pin.set(output_value)
+        #    return output_value
 
 r = RssiPoller()
 
@@ -223,3 +303,6 @@ if not r.sig_sim:
         r.sd.stop()
 else:
     r.logger.info("Starting rssi-simulation")
+    r.simulation()
+    r.sd.stop()
+    r.socket.close()
